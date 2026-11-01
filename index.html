@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#05060a">
+<title>Nebula</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%2322d3ee'/><stop offset='1' stop-color='%238b5cf6'/></linearGradient></defs><rect width='32' height='32' rx='8' fill='url(%23g)'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#05060a; --panel:#0b0d14; --panel-2:#10131c; --line:rgba(255,255,255,.07); --line-2:rgba(255,255,255,.14);
+  --ink:#e7e9f1; --muted:#868ca3; --faint:#555b70;
+  --blue:#3b82f6; --cyan:#22d3ee; --purple:#8b5cf6;
+  --grad:linear-gradient(90deg,var(--cyan),var(--blue) 50%,var(--purple));
+  --ease:cubic-bezier(.22,.9,.24,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0}
+::selection{background:rgba(34,211,238,.25)}
+.hidden{display:none!important}
+
+/* soft background glow */
+.glow{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.glow::before,.glow::after{content:"";position:absolute;width:70vmax;height:70vmax;border-radius:50%;filter:blur(110px);opacity:.16}
+.glow::before{top:-40vmax;left:-20vmax;background:radial-gradient(circle,var(--cyan),var(--blue) 50%,transparent 70%);animation:drift 40s ease-in-out infinite alternate}
+.glow::after{bottom:-45vmax;right:-25vmax;background:radial-gradient(circle,var(--purple),var(--blue) 50%,transparent 70%);animation:drift 50s ease-in-out infinite alternate-reverse}
+@keyframes drift{to{transform:translate(8vw,6vh)}}
+
+.screen{position:fixed;inset:0;z-index:1;display:none}
+.screen.active{display:flex}
+
+/* ---------- GATE ---------- */
+#gate{align-items:center;justify-content:center;padding:24px}
+.gate{width:min(380px,100%);text-align:center;animation:in .8s var(--ease) both}
+.gate.out{animation:out .5s var(--ease) both}
+@keyframes in{from{opacity:0;transform:translateY(10px)}}
+@keyframes out{to{opacity:0;transform:translateY(-8px)}}
+.mark{font-size:28px;font-weight:600;letter-spacing:-.02em;margin-bottom:28px}
+.mark::after{content:"";display:block;width:28px;height:2px;margin:12px auto 0;border-radius:2px;background:var(--grad)}
+.field{position:relative;display:flex;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;transition:border-color .25s}
+.field:focus-within{border-color:var(--line-2)}
+.field::after{content:"";position:absolute;left:12px;right:12px;bottom:-1px;height:1px;background:var(--grad);transform:scaleX(0);transition:transform .4s var(--ease)}
+.field:focus-within::after{transform:scaleX(1)}
+.field input{flex:1;min-width:0;padding:14px 16px;background:none;border:0;outline:0;letter-spacing:.04em}
+.field input::placeholder{color:var(--faint);letter-spacing:0}
+.go{width:38px;height:38px;margin-right:5px;border-radius:9px;display:grid;place-items:center;color:var(--muted);transition:background .2s,color .2s}
+.go:hover:not(:disabled){background:rgba(255,255,255,.05);color:var(--ink)}
+.go:disabled{opacity:.4;cursor:default}
+.go svg{width:18px;height:18px}
+.spin{width:16px;height:16px;border-radius:50%;border:2px solid var(--line-2);border-top-color:var(--cyan);animation:rot .7s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+.remember{display:inline-flex;align-items:center;gap:8px;margin-top:16px;font-size:13px;color:var(--muted);cursor:pointer;user-select:none}
+.remember input{appearance:none;width:15px;height:15px;border-radius:4px;border:1px solid var(--line-2);display:grid;place-items:center;transition:.2s}
+.remember input:checked{background:var(--blue);border-color:var(--blue)}
+.remember input:checked::after{content:"";width:4px;height:7px;border:solid #fff;border-width:0 1.5px 1.5px 0;transform:rotate(45deg) translate(-.5px,-1px)}
+.msg{height:20px;margin-top:14px;font-size:13px;color:var(--muted);transition:opacity .3s}
+.shake{animation:shake .4s ease}
+@keyframes shake{20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+.preview{position:fixed;bottom:16px;left:0;right:0;text-align:center;font-size:12px;color:var(--faint)}
+.preview code{color:var(--muted)}
+
+/* ---------- APP ---------- */
+#app{flex-direction:column;overflow-y:auto;animation:in .6s var(--ease) both}
+.bar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:14px;padding:14px 24px;background:rgba(5,6,10,.8);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.logo{font-weight:600;letter-spacing:-.01em;flex:none}
+.search{flex:1;max-width:460px;margin:0 auto;display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;transition:border-color .25s}
+.search:focus-within{border-color:var(--line-2)}
+.search svg{width:16px;height:16px;color:var(--faint);flex:none}
+.search input{flex:1;min-width:0;padding:9px 0;background:none;border:0;outline:0;font-size:14px}
+.search input::placeholder{color:var(--faint)}
+.icons{display:flex;gap:4px;flex:none}
+.ib{width:36px;height:36px;border-radius:9px;display:grid;place-items:center;color:var(--muted);transition:background .2s,color .2s}
+.ib:hover{background:rgba(255,255,255,.05);color:var(--ink)}
+.ib svg{width:18px;height:18px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;padding:24px}
+.card{position:relative;display:flex;gap:14px;align-items:flex-start;padding:16px;border-radius:12px;background:var(--panel);border:1px solid var(--line);cursor:pointer;text-align:left;transition:border-color .25s,background .25s,transform .25s var(--ease);animation:in .5s var(--ease) both;animation-delay:calc(min(var(--i),12) * 30ms)}
+.card:hover{border-color:var(--line-2);background:var(--panel-2);transform:translateY(-2px)}
+.card:focus-visible{outline:1px solid var(--cyan);outline-offset:2px}
+.tile{width:40px;height:40px;flex:none;border-radius:10px;display:grid;place-items:center;font-weight:600;color:#fff;background:linear-gradient(135deg,var(--c1),var(--c2))}
+.info{min-width:0;flex:1}
+.info h3{font-size:14.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:22px}
+.info p{margin-top:2px;font-size:13px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.edit{position:absolute;top:10px;right:10px;width:26px;height:26px;border-radius:7px;display:grid;place-items:center;color:var(--faint);opacity:0;transition:opacity .2s,background .2s,color .2s}
+.card:hover .edit,.edit:focus-visible{opacity:1}
+.edit:hover{background:rgba(255,255,255,.06);color:var(--ink)}
+.edit svg{width:14px;height:14px}
+@media (hover:none){.edit{opacity:1}}
+.empty{grid-column:1/-1;padding:90px 20px;text-align:center;color:var(--muted);font-size:14px}
+.empty button{margin-top:14px}
+
+/* ---------- OVERLAYS ---------- */
+.overlay{position:fixed;inset:0;z-index:20;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(3,4,7,.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.overlay.open{display:flex;animation:fade .25s ease both}
+.overlay.closing{animation:fade .2s ease reverse both}
+@keyframes fade{from{opacity:0}}
+.overlay.open>*{animation:pop .35s var(--ease) both}
+@keyframes pop{from{opacity:0;transform:scale(.97)}}
+.player{width:100%;height:100%;max-width:1400px;display:flex;flex-direction:column;border-radius:14px;overflow:hidden;background:#000;border:1px solid var(--line)}
+.pbar{display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--panel);border-bottom:1px solid var(--line)}
+.pbar .t{flex:1;min-width:0;font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stage{position:relative;flex:1}
+.stage iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff;opacity:0;transition:opacity .35s}
+.stage iframe.ready{opacity:1}
+.stage .spin{position:absolute;top:50%;left:50%;margin:-8px}
+.modal{width:min(460px,100%);padding:24px;border-radius:14px;background:var(--panel);border:1px solid var(--line)}
+.modal h3{font-size:17px;font-weight:600;margin-bottom:18px}
+.drop{display:block;padding:22px;margin-bottom:14px;border-radius:10px;border:1px dashed var(--line-2);text-align:center;font-size:13px;color:var(--muted);cursor:pointer;transition:border-color .2s,color .2s,background .2s}
+.drop:hover,.drop.over{border-color:var(--cyan);color:var(--ink)}
+.drop.has{border-style:solid;border-color:var(--blue);color:var(--ink)}
+.drop input{display:none}
+.lbl{display:block;margin:0 0 6px;font-size:12px;color:var(--muted)}
+.inp{width:100%;padding:10px 12px;margin-bottom:14px;border-radius:9px;background:var(--bg);border:1px solid var(--line);outline:0;font-size:14px;transition:border-color .2s}
+.inp:focus{border-color:var(--line-2)}
+textarea.inp{resize:vertical;min-height:64px}
+.row{display:flex;gap:8px;align-items:center;margin-top:6px}
+.row .sp{flex:1}
+.btn{padding:9px 16px;border-radius:9px;font-size:14px;font-weight:500;transition:background .2s,opacity .2s,border-color .2s}
+.btn.pri{background:var(--ink);color:var(--bg)}
+.btn.pri:hover{opacity:.88}
+.btn.sec{border:1px solid var(--line);color:var(--muted)}
+.btn.sec:hover{border-color:var(--line-2);color:var(--ink)}
+.btn.del{color:#f87171;padding-left:4px;padding-right:4px}
+.btn:disabled{opacity:.45;cursor:default}
+.toast{position:fixed;left:50%;bottom:22px;z-index:40;transform:translateX(-50%);padding:9px 14px;border-radius:9px;font-size:13px;background:var(--panel-2);border:1px solid var(--line);animation:in .3s var(--ease) both}
+
+@media (max-width:640px){
+  .bar{flex-wrap:wrap;padding:12px 16px}
+  .search{order:3;flex-basis:100%;max-width:none}
+  .icons{margin-left:auto}
+  .grid{padding:16px;grid-template-columns:1fr}
+  .overlay{padding:0}
+  .player{border-radius:0;border:0}
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="glow" aria-hidden="true"></div>
+
+<!-- GATE -->
+<section id="gate" class="screen active">
+  <div class="gate" id="gateBox">
+    <div class="mark">Nebula</div>
+    <form id="gateForm" autocomplete="on">
+      <input type="text" name="username" value="nebula" autocomplete="username" class="hidden" tabindex="-1" aria-hidden="true">
+      <div class="field" id="field">
+        <input id="pw" name="password" type="password" placeholder="Password" aria-label="Password" spellcheck="false" autocapitalize="off" autocorrect="off" autocomplete="current-password" disabled>
+        <button class="go" id="go" type="submit" aria-label="Enter" disabled><div class="spin"></div></button>
+      </div>
+      <label class="remember"><input type="checkbox" id="remember"> Remember this device</label>
+    </form>
+    <p class="msg" id="msg" role="status" aria-live="polite"></p>
+  </div>
+  <div class="preview hidden" id="preview">Preview mode · password <code>nebula-demo</code></div>
+</section>
+
+<!-- APP -->
+<section id="app" class="screen">
+  <header class="bar">
+    <div class="logo">Nebula</div>
+    <label class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Search" aria-label="Search" autocomplete="off" spellcheck="false">
+    </label>
+    <div class="icons">
+      <button class="ib" id="addBtn" aria-label="Add" title="Add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button class="ib" id="lockBtn" aria-label="Lock" title="Lock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></button>
+    </div>
+  </header>
+  <main class="grid" id="grid"></main>
+</section>
+
+<!-- PLAYER -->
+<div class="overlay" id="playerOv" role="dialog" aria-modal="true" aria-label="Player">
+  <div class="player">
+    <div class="pbar">
+      <button class="ib" id="pClose" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="t" id="pTitle"></div>
+      <button class="ib" id="pReload" aria-label="Restart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></button>
+      <button class="ib" id="pFull" aria-label="Fullscreen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+    </div>
+    <div class="stage" id="stage">
+      <div class="spin" id="pSpin"></div>
+      <iframe id="frame" title="App" sandbox="allow-scripts allow-pointer-lock allow-forms allow-modals allow-popups allow-downloads" allow="fullscreen; gamepad; autoplay; clipboard-write" referrerpolicy="no-referrer"></iframe>
+    </div>
+  </div>
+</div>
+
+<!-- EDITOR -->
+<div class="overlay" id="editorOv" role="dialog" aria-modal="true" aria-label="Add or edit">
+  <form class="modal" id="edForm">
+    <h3 id="edTitle">Add</h3>
+    <label class="drop" id="drop"><input type="file" id="edFile" accept=".html,.htm,text/html"><span id="dropTxt">Drop an .html file or click to choose</span></label>
+    <label class="lbl" for="edName">Name</label>
+    <input class="inp" id="edName" maxlength="60" required>
+    <label class="lbl" for="edDesc">Description</label>
+    <textarea class="inp" id="edDesc" maxlength="200"></textarea>
+    <div class="row">
+      <button type="button" class="btn del hidden" id="edDelete">Delete</button>
+      <div class="sp"></div>
+      <button type="button" class="btn sec" id="edCancel">Cancel</button>
+      <button type="submit" class="btn pri" id="edSave">Save</button>
+    </div>
+  </form>
+</div>
+
+<script type="module">
+/* ============================================================
+   Paste your Firebase web config here (Project settings → Your apps).
+   These values are meant to be public; the database rules are what
+   protect your data. While apiKey says PASTE…, the page runs in
+   preview mode.
+   ============================================================ */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBx1ruxtF8phZNscA9MmK9NZCOac_rwgmo",
+  authDomain: "nebula-73c3e.firebaseapp.com",
+  databaseURL: "https://nebula-73c3e-default-rtdb.firebaseio.com",
+  projectId: "nebula-73c3e",
+  storageBucket: "nebula-73c3e.firebasestorage.app",
+  messagingSenderId: "262951829627",
+  appId: "1:262951829627:web:0f2e2808b6ea7f29b722de"
+};
+/* ============================================================ */
+
+const FB = "https://www.gstatic.com/firebasejs/10.12.2/";
+const DEMO = !FIREBASE_CONFIG.apiKey || FIREBASE_CONFIG.apiKey.startsWith("PASTE");
+const WEEK = 7 * 864e5;
+const SCHEDULE = [60e3, 5*60e3, 15*60e3, 60*60e3, 6*3600e3, 24*3600e3, 3*864e5, 7*864e5];
+const TILES = [["#22d3ee","#3b82f6"],["#3b82f6","#8b5cf6"],["#8b5cf6","#22d3ee"],["#06b6d4","#6366f1"]];
+const MAX_BYTES = 9.5 * 1024 * 1024;
+
+const $ = s => document.querySelector(s);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const safe = (fn, fb) => { try { return fn(); } catch { return fb; } };
+const ls = { get: (k, fb) => safe(() => JSON.parse(localStorage.getItem(k)) ?? fb, fb), set: (k, v) => safe(() => localStorage.setItem(k, JSON.stringify(v))), del: k => safe(() => localStorage.removeItem(k)) };
+const ss = { get: k => safe(() => sessionStorage.getItem(k), null), set: (k, v) => safe(() => sessionStorage.setItem(k, v)), del: k => safe(() => sessionStorage.removeItem(k)) };
+
+/* Deterrents only. The password is not in this file. */
+addEventListener("contextmenu", e => e.preventDefault());
+addEventListener("keydown", e => {
+  const k = e.key.toLowerCase(), mod = e.ctrlKey || e.metaKey;
+  if (k === "f12" || (mod && e.shiftKey && ["i","j","c"].includes(k)) || (mod && ["u","s"].includes(k))) e.preventDefault();
+});
+
+/* ---------------- data stores ---------------- */
+async function pbkdf2(pw, salt, iter) {
+  const enc = new TextEncoder();
+  const base = await crypto.subtle.importKey("raw", enc.encode(pw.normalize("NFC")), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: enc.encode(salt), iterations: iter, hash: "SHA-256" }, base, 256);
+  return [...new Uint8Array(bits)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function realStore(cfg) {
+  const [{ initializeApp }, { getAuth, signInAnonymously }, d] = await Promise.all([
+    import(FB + "firebase-app.js"), import(FB + "firebase-auth.js"), import(FB + "firebase-database.js")
+  ]);
+  const app = initializeApp(cfg), db = d.getDatabase(app);
+  let offset = 0;
+  d.onValue(d.ref(db, ".info/serverTimeOffset"), s => offset = s.val() || 0);
+  const { user } = await signInAnonymously(getAuth(app));
+  const uid = user.uid;
+  const conf = (await d.get(d.ref(db, "config"))).val();
+  if (!conf || !conf.salt) throw new Error("NOSETUP");
+  let key = null;
+  return {
+    now: () => Date.now() + offset,
+    derive: pw => pbkdf2(pw, conf.salt, conf.iter || 310000),
+    getLock: async () => (await d.get(d.ref(db, `locks/${uid}`))).val(),
+    putLock: rec => d.set(d.ref(db, `locks/${uid}`), rec),
+    async tryKey(k) {
+      try { const s = await d.get(d.ref(db, `vault/${k}/meta`)); if (s.exists()) { key = k; return true; } return false; }
+      catch (e) { if (/permission/i.test(String(e?.code || e?.message || e))) return "locked"; throw e; }
+    },
+    watchApps: cb => d.onValue(d.ref(db, `vault/${key}/apps`), s => cb(s.val() || {})),
+    getFile: async id => (await d.get(d.ref(db, `vault/${key}/files/${id}`))).val(),
+    newId: () => d.push(d.ref(db, `vault/${key}/apps`)).key,
+    async saveApp(id, meta, html) {
+      const u = {};
+      for (const [k, v] of Object.entries(meta)) u[`apps/${id}/${k}`] = v;
+      if (html != null) u[`files/${id}`] = html;
+      await d.update(d.ref(db, `vault/${key}`), u);
+    },
+    deleteApp: id => d.update(d.ref(db, `vault/${key}`), { [`apps/${id}`]: null, [`files/${id}`]: null }),
+  };
+}
+
+function demoStore() {
+  let lock = null, cb = null, n = 0;
+  const apps = {}, files = {};
+  const emit = () => cb && cb(structuredClone(apps));
+  return {
+    now: () => Date.now(),
+    derive: async pw => (await sleep(400), pw === "nebula-demo" ? "demo" : "x"),
+    getLock: async () => lock && { ...lock },
+    putLock: async r => { lock = { ...r }; },
+    tryKey: async k => (lock && lock.until > Date.now()) ? "locked" : k === "demo",
+    watchApps: f => { cb = f; emit(); },
+    getFile: async id => files[id],
+    newId: () => "a" + (++n) + Date.now(),
+    saveApp: async (id, meta, html) => { apps[id] = { ...(apps[id] || {}), ...meta }; if (html != null) files[id] = html; emit(); },
+    deleteApp: async id => { delete apps[id]; delete files[id]; emit(); },
+  };
+}
+
+/* ---------------- gate ---------------- */
+let store, lockRec = null, busy = false;
+const pw = $("#pw"), go = $("#go"), msg = $("#msg"), gateBox = $("#gateBox");
+const ARROW = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>`;
+
+const lockDuration = s => s <= SCHEDULE.length ? SCHEDULE[s - 1] : SCHEDULE.at(-1) * 2 ** (s - SCHEDULE.length);
+const isQuiet = (r, now) => !r || (now - (r.lastFail || 0) > WEEK && now - (r.until || 0) > WEEK);
+const isLocked = () => !!(lockRec && lockRec.until > store.now());
+
+function setBusy(b) { busy = b; go.disabled = b; go.innerHTML = b ? `<div class="spin"></div>` : ARROW; }
+function deny() {
+  msg.textContent = "Access denied.";
+  gateBox.classList.remove("shake"); void gateBox.offsetWidth; gateBox.classList.add("shake");
+  pw.select();
+}
+
+async function recordFail() {
+  const now = store.now();
+  let r = await store.getLock();
+  r = isQuiet(r, now) ? { fails: 0, strikes: 0, until: 0, lastFail: 0 } : { fails: 0, strikes: 0, until: 0, lastFail: 0, ...r };
+  r.fails += 1; r.lastFail = now;
+  if (r.fails >= 3) { r.strikes += 1; r.fails = 0; r.until = now + lockDuration(r.strikes); }
+  await store.putLock(r);
+  return r;
+}
+
+$("#gateForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  if (busy) return;
+  const val = pw.value.trim();
+  if (!val) return;
+  msg.textContent = "";
+  setBusy(true);
+  const started = Date.now();
+  try {
+    // While locked out, every attempt looks exactly like a wrong password.
+    if (isLocked()) { await sleep(700 - (Date.now() - started)); setBusy(false); return deny(); }
+    const k = await store.derive(val);
+    const r = await store.tryKey(k);
+    if (r === true) {
+      if (lockRec && lockRec.fails) store.putLock({ ...lockRec, fails: 0 }).catch(() => {});
+      ss.set("nebula.k", k);
+      if ($("#remember").checked) ls.set("nebula.trust", { k, exp: Date.now() + WEEK }); else ls.del("nebula.trust");
+      pw.value = "";
+      return enter();
+    }
+    if (r === "locked") lockRec = await store.getLock().catch(() => lockRec);
+    else lockRec = await recordFail();
+    await sleep(Math.max(0, 700 - (Date.now() - started)));
+    setBusy(false); deny();
+  } catch (err) {
+    console.error(err); setBusy(false);
+    msg.textContent = "Connection problem. Try again.";
+  }
+});
+
+function enter() {
+  gateBox.classList.add("out");
+  setTimeout(() => {
+    $("#gate").classList.remove("active");
+    $("#app").classList.add("active");
+    startApp();
+  }, 450);
+}
+
+async function boot() {
+  if (DEMO) $("#preview").classList.remove("hidden");
+  try { store = DEMO ? demoStore() : await realStore(FIREBASE_CONFIG); }
+  catch (e) { console.error(e); msg.textContent = e.message === "NOSETUP" ? "Database not set up yet." : "Connection problem."; return; }
+  lockRec = await store.getLock().catch(() => null);
+  const t = ls.get("nebula.trust", null);
+  const saved = ss.get("nebula.k") || (t && t.exp > Date.now() ? t.k : null);
+  if (saved && !isLocked()) {
+    if ((await store.tryKey(saved).catch(() => false)) === true) return enter();
+    ss.del("nebula.k"); ls.del("nebula.trust");
+  }
+  setBusy(false);
+  pw.disabled = false;
+  pw.focus();
+}
+
+/* ---------------- app ---------------- */
+const state = { apps: {}, q: "", cache: new Map(), animate: true };
+const grid = $("#grid");
+
+function startApp() { store.watchApps(a => { state.apps = a; render(); }); }
+
+function matches(a, toks) {
+  const hay = `${a.name || ""} ${a.desc || ""}`.toLowerCase();
+  return toks.every(t => hay.includes(t));
+}
+function render() {
+  const toks = state.q.toLowerCase().split(/\s+/).filter(Boolean);
+  const all = Object.entries(state.apps).map(([id, a]) => ({ id, ...a }));
+  const list = all.filter(a => matches(a, toks)).sort((a, b) => (b.added || 0) - (a.added || 0));
+  if (!all.length) {
+    grid.innerHTML = `<div class="empty">Nothing here yet.<br><button class="btn sec" data-add>Add an HTML file</button></div>`;
+    return;
+  }
+  if (!list.length) { grid.innerHTML = `<div class="empty">No results.</div>`; return; }
+  const anim = state.animate; state.animate = false;
+  grid.innerHTML = list.map((a, i) => {
+    const [c1, c2] = TILES[[...a.id].reduce((s, c) => s + c.charCodeAt(0), 0) % TILES.length];
+    return `<div class="card" role="button" tabindex="0" data-id="${esc(a.id)}" style="--i:${anim ? i : 0};--c1:${c1};--c2:${c2};${anim ? "" : "animation:none"}">
+      <div class="tile">${esc((a.name || "?").trim()[0]?.toUpperCase() || "?")}</div>
+      <div class="info"><h3>${esc(a.name || "Untitled")}</h3>${a.desc ? `<p>${esc(a.desc)}</p>` : ""}</div>
+      <button class="edit" data-edit aria-label="Edit"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
+    </div>`;
+  }).join("");
+}
+
+let qt;
+$("#q").addEventListener("input", e => { clearTimeout(qt); qt = setTimeout(() => { state.q = e.target.value; state.animate = true; render(); }, 80); });
+grid.addEventListener("click", e => {
+  if (e.target.closest("[data-add]")) return openEditor();
+  const c = e.target.closest(".card"); if (!c) return;
+  if (e.target.closest("[data-edit]")) return openEditor(c.dataset.id);
+  openPlayer(c.dataset.id);
+});
+grid.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.classList.contains("card")) openPlayer(e.target.dataset.id); });
+
+/* overlays */
+function show(el) { el.classList.remove("closing"); el.classList.add("open"); }
+function hide(el, after) { if (!el.classList.contains("open")) return; el.classList.add("closing"); setTimeout(() => { el.classList.remove("open", "closing"); after && after(); }, 200); }
+
+/* player */
+const playerOv = $("#playerOv"), frame = $("#frame");
+let current = null;
+async function openPlayer(id) {
+  const a = state.apps[id]; if (!a) return;
+  current = id;
+  $("#pTitle").textContent = a.name || "Untitled";
+  frame.classList.remove("ready"); frame.removeAttribute("srcdoc"); $("#pSpin").classList.remove("hidden");
+  show(playerOv);
+  try {
+    let html = state.cache.get(id);
+    if (html == null) { html = await store.getFile(id); if (html == null) throw 0; state.cache.set(id, html); }
+    if (current !== id) return;
+    frame.onload = () => { $("#pSpin").classList.add("hidden"); frame.classList.add("ready"); frame.focus(); };
+    frame.srcdoc = html;
+  } catch { toast("Couldn't open that file."); closePlayer(); }
+}
+function closePlayer() {
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  hide(playerOv, () => { frame.removeAttribute("srcdoc"); current = null; });
+}
+$("#pClose").onclick = closePlayer;
+$("#pReload").onclick = () => { const h = frame.srcdoc; frame.classList.remove("ready"); frame.srcdoc = ""; requestAnimationFrame(() => frame.srcdoc = h); };
+$("#pFull").onclick = () => { const s = $("#stage"); document.fullscreenElement ? document.exitFullscreen() : (s.requestFullscreen?.() || s.webkitRequestFullscreen?.()); };
+
+/* editor */
+const editorOv = $("#editorOv"), drop = $("#drop");
+let edId = null, edHtml = null;
+function openEditor(id = null) {
+  edId = id; edHtml = null;
+  const a = id ? state.apps[id] : {};
+  $("#edTitle").textContent = id ? "Edit" : "Add";
+  $("#edName").value = a.name || ""; $("#edDesc").value = a.desc || "";
+  drop.classList.remove("has");
+  $("#dropTxt").textContent = id ? "Drop a new .html file to replace (optional)" : "Drop an .html file or click to choose";
+  const del = $("#edDelete"); del.classList.toggle("hidden", !id); del.dataset.armed = ""; del.textContent = "Delete";
+  show(editorOv);
+}
+const closeEditor = () => hide(editorOv);
+async function takeFile(f) {
+  if (!f) return;
+  if (!/\.html?$/i.test(f.name) && f.type !== "text/html") return toast("Choose an .html file.");
+  if (f.size > MAX_BYTES) return toast("That file is too large (max about 9.5 MB).");
+  edHtml = await f.text();
+  drop.classList.add("has"); $("#dropTxt").textContent = f.name;
+  if (!$("#edName").value) {
+    const t = new DOMParser().parseFromString(edHtml, "text/html").title?.trim();
+    $("#edName").value = (t || f.name.replace(/\.html?$/i, "").replace(/[-_]+/g, " ")).slice(0, 60);
+  }
+}
+$("#edFile").onchange = e => takeFile(e.target.files[0]);
+["dragenter", "dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave", "drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", e => takeFile(e.dataTransfer.files[0]));
+$("#edCancel").onclick = closeEditor;
+$("#edDelete").onclick = async e => {
+  const b = e.currentTarget;
+  if (!b.dataset.armed) { b.dataset.armed = "1"; b.textContent = "Confirm delete"; return; }
+  try { await store.deleteApp(edId); state.cache.delete(edId); closeEditor(); } catch { toast("Delete failed."); }
+};
+$("#edForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const name = $("#edName").value.trim();
+  if (!name) return;
+  if (!edId && edHtml == null) { drop.classList.remove("shake"); void drop.offsetWidth; drop.classList.add("shake"); return; }
+  const save = $("#edSave"); save.disabled = true;
+  const id = edId || store.newId(), old = state.apps[id] || {};
+  const meta = { name, desc: $("#edDesc").value.trim(), added: old.added || Date.now(), updated: Date.now() };
+  if (edHtml != null) meta.size = new Blob([edHtml]).size;
+  try {
+    await store.saveApp(id, meta, edHtml);
+    if (edHtml != null) state.cache.set(id, edHtml);
+    state.animate = true; closeEditor();
+  } catch (err) { console.error(err); toast("Save failed."); }
+  save.disabled = false;
+});
+$("#addBtn").onclick = () => openEditor();
+playerOv.addEventListener("click", e => { if (e.target === playerOv) closePlayer(); });
+editorOv.addEventListener("click", e => { if (e.target === editorOv) closeEditor(); });
+
+/* lock, keys, toast */
+$("#lockBtn").onclick = () => { ss.del("nebula.k"); ls.del("nebula.trust"); document.body.style.transition = "opacity .35s"; document.body.style.opacity = "0"; setTimeout(() => location.reload(), 350); };
+addEventListener("keydown", e => {
+  if (e.key === "Escape") { editorOv.classList.contains("open") ? closeEditor() : closePlayer(); }
+  const typing = /input|textarea/i.test(document.activeElement?.tagName);
+  if (e.key === "/" && !typing && $("#app").classList.contains("active")) { e.preventDefault(); $("#q").focus(); }
+});
+function toast(t) {
+  const el = document.createElement("div"); el.className = "toast"; el.textContent = t;
+  document.body.appendChild(el); setTimeout(() => el.remove(), 2400);
+}
+
+boot();
+</script>
+</body>
+</html>
