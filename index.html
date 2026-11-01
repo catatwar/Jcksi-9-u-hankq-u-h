@@ -96,7 +96,7 @@ button{cursor:pointer;background:none;border:0}
 .tabs .ind{position:absolute;top:3px;bottom:3px;left:0;border-radius:7px;background:var(--panel-2);box-shadow:inset 0 0 0 1px var(--line-2);transition:transform .5s var(--ease),width .5s var(--ease)}
 .tabs .ind::after{content:"";position:absolute;left:30%;right:30%;bottom:-1px;height:1.5px;border-radius:2px;background:var(--grad)}
 
-.grid{position:relative;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;padding:18px 24px 40px}
+.grid{position:relative;display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--card-min,230px),1fr));gap:14px;padding:18px 24px 40px}
 .card{position:relative;display:flex;flex-direction:column;border-radius:12px;overflow:hidden;background:var(--panel);border:1px solid var(--line);cursor:pointer;text-align:left;transition:border-color .3s,background .3s,box-shadow .5s var(--ease),translate .5s var(--ease);will-change:transform}
 .card:hover{border-color:var(--line-2);background:var(--panel-2);translate:0 -3px;box-shadow:0 18px 40px -20px rgba(59,130,246,.45)}
 .card:active{translate:0 -1px}
@@ -187,7 +187,7 @@ textarea.inp{resize:vertical;min-height:64px}
   .search{order:3;flex-basis:100%;max-width:none!important}
   .icons{margin-left:auto}
   .tabs-row{padding:16px 16px 0}
-  .grid{padding:14px 16px 32px;grid-template-columns:repeat(2,1fr);gap:10px}
+  .grid{padding:14px 16px 32px;grid-template-columns:repeat(var(--mcols,2),1fr);gap:10px}
   .info{padding:10px 10px 12px}
   .info p{display:none}
   .overlay{padding:0}
@@ -209,6 +209,64 @@ textarea.inp{resize:vertical;min-height:64px}
 body.fs .overlay{padding:0}
 body.fs .player{border-radius:0;border:0;max-width:none}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+
+/* ---------- PASTE / SEGMENTED ---------- */
+.seg{display:inline-flex;padding:3px;gap:2px;border-radius:9px;background:var(--bg);border:1px solid var(--line)}
+.seg button{padding:5px 11px;border-radius:6px;font-size:12.5px;color:var(--muted);transition:background .25s,color .25s,box-shadow .25s}
+.seg button:hover{color:var(--ink)}
+.seg button.on{background:var(--panel-2);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line-2)}
+.srcrow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+textarea.code{font:12.5px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;min-height:160px;white-space:pre;overflow:auto;tab-size:2}
+textarea.code:not(.hidden){animation:fade .3s var(--ease)}
+
+/* ---------- PAUSE ---------- */
+.pause{position:absolute;inset:0;z-index:2;display:grid;place-items:center;text-align:center;background:rgba(5,6,10,.74);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);opacity:0;pointer-events:none;transition:opacity .4s var(--ease);cursor:pointer}
+.pause.on{opacity:1;pointer-events:auto}
+.pause .pt{font-size:20px;font-weight:600;margin-bottom:4px}
+.pause .ps{font-size:13px;color:var(--muted);margin-bottom:16px}
+.pause>div{transform:translateY(8px) scale(.98);transition:transform .5s var(--ease)}
+.pause.on>div{transform:none}
+
+/* ---------- CODE EDITOR ---------- */
+.code-wrap{width:100%;height:100%;max-width:1400px;display:flex;flex-direction:column;border-radius:14px;overflow:hidden;background:var(--panel);border:1px solid var(--line);box-shadow:0 40px 100px -30px rgba(0,0,0,.9)}
+.overlay.open>.code-wrap{animation:modalIn .5s var(--ease) both}
+.overlay.closing>.code-wrap{animation:modalIn .25s var(--ease) reverse both}
+.cstat{font-size:12px;color:var(--muted);margin-right:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:40vw}
+.btn.sm{padding:6px 12px;font-size:13px}
+#cPrev.on{border-color:var(--cyan);color:var(--ink)}
+.cbody{flex:1;display:flex;min-height:0}
+.cedit{flex:1;display:flex;min-width:0;background:var(--bg)}
+.gutter{flex:none;min-width:48px;margin:0;padding:14px 10px 30px 8px;overflow:hidden;text-align:right;white-space:pre;color:var(--faint);font:12.5px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;user-select:none;-webkit-user-select:none;border-right:1px solid var(--line)}
+#cText{flex:1;min-width:0;padding:14px 14px 30px;border:0;outline:0;resize:none;background:transparent;color:var(--ink);font:12.5px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre;overflow:auto;tab-size:2;caret-color:var(--cyan)}
+#cText::selection{background:rgba(59,130,246,.35)}
+.cprev{display:none;flex:1;min-width:0;position:relative;background:#fff;border-left:1px solid var(--line)}
+.cprev iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+#codeOv.previewing .cprev{display:block;animation:fade .35s var(--ease)}
+@media (max-width:800px){#codeOv.previewing .cedit{display:none}.cprev{border-left:0}.cstat{display:none}}
+
+/* ---------- SETTINGS ---------- */
+.settings{width:min(500px,100%)}
+.sgroup{padding:14px 0;border-top:1px solid var(--line)}
+.sgroup:first-of-type{border-top:0;padding-top:0}
+.sh{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-bottom:10px}
+.srow{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:36px;font-size:14px}
+.srow+.srow{margin-top:8px}
+.srow.stack{flex-direction:column;align-items:stretch;gap:6px}
+.srow.stack label{font-size:14px}
+.srow.stack .inp{margin:0}
+.shint{font-size:12px;color:var(--faint);margin-top:10px}
+.keycap{min-width:46px;padding:6px 12px;border-radius:8px;background:var(--bg);border:1px solid var(--line-2);font:13px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--ink);transition:border-color .25s,color .25s}
+.keycap:hover{border-color:var(--cyan)}
+.keycap.rec{border-color:var(--cyan);color:var(--cyan);animation:breathe 1.2s ease-in-out infinite}
+@keyframes breathe{50%{opacity:.5}}
+.switch{position:relative;flex:none;width:40px;height:22px;border-radius:11px;background:var(--line-2);transition:background .35s var(--ease)}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.4);transition:transform .45s var(--ease)}
+.switch.on{background:var(--blue)}
+.switch.on::after{transform:translateX(18px)}
+@media (max-width:640px){.srow{flex-wrap:wrap}.seg button{padding:5px 9px}}
+
+/* user-chosen reduced motion */
+body.reduce *,body.reduce *::before,body.reduce *::after{animation:none!important;transition:none!important}
 </style>
 </head>
 <body>
@@ -245,6 +303,7 @@ body.fs .player{border-radius:0;border:0;max-width:none}
     </label>
     <div class="icons">
       <button class="ib" id="addBtn" aria-label="Add" title="Add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button class="ib" id="settingsBtn" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h9M18 7h2M4 17h3M12 17h8"/><circle cx="15.5" cy="7" r="2.3"/><circle cx="9.5" cy="17" r="2.3"/></svg></button>
       <button class="ib" id="lockBtn" aria-label="Lock" title="Lock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></button>
     </div>
   </header>
@@ -273,6 +332,7 @@ body.fs .player{border-radius:0;border:0;max-width:none}
     </div>
     <div class="stage" id="stage">
       <div class="spin" id="pSpin"></div>
+      <div class="pause" id="pauseOv"><div><div class="pt">Paused</div><div class="ps">Click anywhere or press Space to resume</div><button type="button" class="btn pri" id="pResume">Resume</button></div></div>
       <iframe id="frame" title="App" sandbox="allow-scripts allow-pointer-lock allow-forms allow-modals allow-popups allow-downloads" allow="fullscreen; gamepad; autoplay; clipboard-write" referrerpolicy="no-referrer"></iframe>
     </div>
   </div>
@@ -282,7 +342,12 @@ body.fs .player{border-radius:0;border:0;max-width:none}
 <div class="overlay" id="editorOv" role="dialog" aria-modal="true" aria-label="Add or edit">
   <form class="modal" id="edForm">
     <h3 id="edTitle">Add</h3>
+    <div class="srcrow">
+      <div class="seg" id="srcSeg"><button type="button" data-v="file" class="on">Upload file</button><button type="button" data-v="paste">Paste code</button></div>
+      <button type="button" class="linkbtn hidden" id="edCode">Open code editor</button>
+    </div>
     <label class="drop" id="drop"><input type="file" id="edFile" accept=".html,.htm,text/html"><span id="dropTxt">Drop an .html file or click to choose</span></label>
+    <textarea class="inp code hidden" id="edPaste" placeholder="Paste your HTML here" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off"></textarea>
     <label class="lbl" for="edName">Name</label>
     <input class="inp" id="edName" maxlength="60" required>
     <label class="lbl" for="edDesc">Description</label>
@@ -303,6 +368,51 @@ body.fs .player{border-radius:0;border:0;max-width:none}
       <button type="submit" class="btn pri" id="edSave">Save</button>
     </div>
   </form>
+</div>
+
+<!-- CODE EDITOR -->
+<div class="overlay" id="codeOv" role="dialog" aria-modal="true" aria-label="Code editor">
+  <div class="code-wrap">
+    <div class="pbar">
+      <button class="ib" id="cClose" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="t" id="cTitle"></div>
+      <span class="cstat" id="cStat"></span>
+      <button type="button" class="btn sec sm" id="cPrev">Preview</button>
+      <button type="button" class="btn pri sm" id="cSave" disabled>Save</button>
+    </div>
+    <div class="cbody">
+      <div class="cedit"><pre class="gutter" id="cGut" aria-hidden="true"></pre><textarea id="cText" aria-label="Code" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" wrap="off"></textarea></div>
+      <div class="cprev"><iframe id="cFrame" title="Preview" sandbox="allow-scripts allow-pointer-lock allow-forms allow-modals" referrerpolicy="no-referrer"></iframe></div>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div class="overlay" id="settingsOv" role="dialog" aria-modal="true" aria-label="Settings">
+  <div class="modal settings">
+    <h3>Settings</h3>
+    <div class="sgroup">
+      <div class="sh">Panic</div>
+      <div class="srow stack"><label for="sUrl">Panic link</label><input class="inp" id="sUrl" type="url" spellcheck="false" autocomplete="off" autocapitalize="off"></div>
+      <div class="srow"><span>Panic key</span><button type="button" class="keycap" id="sKey"></button></div>
+      <p class="shint">Press the panic key anywhere except while typing in a text box, or triple-click the red button.</p>
+    </div>
+    <div class="sgroup">
+      <div class="sh">Playing</div>
+      <div class="srow"><span>Pause when switching tabs</span><button type="button" class="switch" id="sPause" role="switch" aria-label="Pause when switching tabs"></button></div>
+    </div>
+    <div class="sgroup">
+      <div class="sh">Library</div>
+      <div class="srow"><span>Card size</span><div class="seg" data-k="cardSize"><button type="button" data-v="small">Small</button><button type="button" data-v="medium">Medium</button><button type="button" data-v="large">Large</button></div></div>
+      <div class="srow"><span>Open on</span><div class="seg" data-k="defaultTab"><button type="button" data-v="all">All</button><button type="button" data-v="fav">Favorites</button><button type="button" data-v="recent">Recent</button></div></div>
+      <div class="srow"><span>Animations</span><div class="seg" data-k="motion"><button type="button" data-v="full">Full</button><button type="button" data-v="reduced">Reduced</button></div></div>
+    </div>
+    <div class="sgroup">
+      <div class="sh">Security</div>
+      <div class="srow"><span>Auto-lock when idle</span><div class="seg" data-k="autoLock"><button type="button" data-v="0">Off</button><button type="button" data-v="5">5m</button><button type="button" data-v="15">15m</button><button type="button" data-v="30">30m</button><button type="button" data-v="60">1h</button></div></div>
+    </div>
+    <div class="row"><button type="button" class="linkbtn" id="sReset">Reset to defaults</button><div class="sp"></div><button type="button" class="btn pri" id="sDone">Done</button></div>
+  </div>
 </div>
 
 <!-- DELETE PASSWORD -->
@@ -338,7 +448,6 @@ const FIREBASE_CONFIG = {
 };
 /* ============================================================ */
 
-const PANIC_URL = "https://canvas.instructure.com/";
 const FB = "https://www.gstatic.com/firebasejs/10.12.2/";
 const DEMO = !FIREBASE_CONFIG.apiKey || FIREBASE_CONFIG.apiKey.startsWith("PASTE");
 const WEEK = 7 * 864e5;
@@ -348,15 +457,30 @@ const MAX_BYTES = 9.5 * 1024 * 1024;
 const MAX_SAVE = 1.9e6;
 const RECENT_MAX = 10;
 const EASE = "cubic-bezier(.16,1,.3,1)";
-const REDUCE = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const RM = matchMedia("(prefers-reduced-motion: reduce)");
+let reduceMotion = RM.matches;
 
 const $ = s => document.querySelector(s);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const safe = (fn, fb) => { try { return fn(); } catch { return fb; } };
 const ls = { get: (k, fb) => safe(() => JSON.parse(localStorage.getItem(k)) ?? fb, fb), set: (k, v) => safe(() => localStorage.setItem(k, JSON.stringify(v))), del: k => safe(() => localStorage.removeItem(k)) };
 const ss = { get: k => safe(() => sessionStorage.getItem(k), null), set: (k, v) => safe(() => sessionStorage.setItem(k, v)), del: k => safe(() => sessionStorage.removeItem(k)) };
+
+/* settings (cached on this device, synced to your vault) */
+const DEFAULTS = { panicUrl: "https://login.classlink.com/my/pwcs", panicKey: "/", autoPause: true, motion: "full", cardSize: "medium", defaultTab: "all", autoLock: 0 };
+const ENUMS = { motion: ["full", "reduced"], cardSize: ["small", "medium", "large"], defaultTab: ["all", "fav", "recent"], autoLock: [0, 5, 15, 30, 60] };
+function cleanSettings(o) {
+  const s = { ...DEFAULTS };
+  if (!o || typeof o !== "object") return s;
+  if (typeof o.panicUrl === "string" && o.panicUrl.length < 500 && /^https?:\/\/\S+$/i.test(o.panicUrl)) s.panicUrl = o.panicUrl;
+  if (typeof o.panicKey === "string" && o.panicKey.length >= 1 && o.panicKey.length <= 12) s.panicKey = o.panicKey;
+  if (typeof o.autoPause === "boolean") s.autoPause = o.autoPause;
+  for (const k of ["motion", "cardSize", "defaultTab", "autoLock"]) if (ENUMS[k].includes(o[k])) s[k] = o[k];
+  return s;
+}
+let settings = cleanSettings(ls.get("nebula.settings", null));
 const isPerm = e => /permission/i.test(String(e?.code || e?.message || e));
-const anim = (el, frames, opts) => REDUCE || !el.animate ? null : el.animate(frames, { easing: EASE, ...opts });
+const anim = (el, frames, opts) => reduceMotion || !el.animate ? null : el.animate(frames, { easing: EASE, ...opts });
 const ago = t => { const s = (Date.now() - t) / 1000; if (s < 60) return "just now"; const m = s / 60; if (m < 60) return `${Math.floor(m)} min ago`; const h = m / 60; if (h < 24) return `${Math.floor(h)} hr ago`; const d = Math.floor(h / 24); return d === 1 ? "yesterday" : `${d} days ago`; };
 
 /* No zooming (pinch, ctrl+wheel, ctrl +/-) */
@@ -420,6 +544,7 @@ async function realStore(cfg) {
     getSave: async id => { const v = (await d.get(r(`saves/${id}`))).val(); return safe(() => JSON.parse(v), null) || {}; },
     putSave: (id, str) => d.set(r(`saves/${id}`), str),
     clearSave: id => d.set(r(`saves/${id}`), null),
+    putSettings: str => d.set(r("settings"), str),
     // Delete password: the database only accepts this write if the hash matches,
     // and then allows deletes/replacements for 10 minutes.
     async elevate(pw) {
@@ -432,8 +557,8 @@ async function realStore(cfg) {
 
 function demoStore() {
   let lock = null, n = 0;
-  const data = { apps: {}, thumbs: {}, favs: {}, recent: {}, saves: {} }, files = {}, subs = {};
-  const emit = name => subs[name] && subs[name]({ ...data[name] });
+  const data = { apps: {}, thumbs: {}, favs: {}, recent: {}, saves: {}, settings: "" }, files = {}, subs = {};
+  const emit = name => subs[name] && subs[name](typeof data[name] === "object" ? { ...data[name] } : data[name]);
   const emitAll = () => Object.keys(data).forEach(emit);
   return {
     now: () => Date.now(),
@@ -450,13 +575,14 @@ function demoStore() {
       if (thumb === null) delete data.thumbs[id]; else if (thumb !== undefined) data.thumbs[id] = thumb;
       emitAll();
     },
-    deleteApp: async id => { for (const k in data) delete data[k][id]; delete files[id]; emitAll(); },
+    deleteApp: async id => { for (const k in data) if (typeof data[k] === "object") delete data[k][id]; delete files[id]; emitAll(); },
     setFav: async (id, on) => { if (on) data.favs[id] = true; else delete data.favs[id]; emit("favs"); },
     markPlayed: async id => { data.recent[id] = Date.now(); emit("recent"); },
     dropRecent: async ids => { ids.forEach(id => delete data.recent[id]); emit("recent"); },
     getSave: async id => safe(() => JSON.parse(data.saves[id]), null) || {},
     putSave: async (id, s) => { data.saves[id] = s; },
     clearSave: async id => { delete data.saves[id]; },
+    putSettings: async str => { data.settings = str; },
     elevate: async pw => (await sleep(400), pw === "delete-demo"),
   };
 }
@@ -548,6 +674,8 @@ const DOTS = `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12
 
 function startApp() {
   grid.innerHTML = Array.from({ length: 6 }, () => `<div class="skel"><div class="a"></div><div class="b"></div></div>`).join("");
+  state.view = settings.defaultTab;
+  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.v === state.view));
   moveInd(false);
   let first = true;
   const sub = name => store.watch(name, v => {
@@ -557,6 +685,16 @@ function startApp() {
     if (state.loaded) render();
   });
   ["thumbs", "favs", "recent", "apps"].forEach(sub);
+  store.watch("settings", v => {
+    if (typeof v !== "string" || !v) {
+      if (!remoteSettingsSeen) { remoteSettingsSeen = true; store.putSettings(JSON.stringify(settings)).catch(() => {}); }
+      return;
+    }
+    remoteSettingsSeen = true;
+    const next = cleanSettings(safe(() => JSON.parse(v), null));
+    if (JSON.stringify(next) === JSON.stringify(settings)) return;
+    settings = next; ls.set("nebula.settings", settings); applySettings(); fillSettings();
+  });
 }
 
 function trimRecent() {
@@ -695,27 +833,52 @@ function show(el) { el.classList.remove("closing"); el.classList.add("open"); }
 function hide(el, after) {
   if (!el.classList.contains("open")) return;
   el.classList.add("closing");
-  setTimeout(() => { el.classList.remove("open", "closing"); after && after(); }, REDUCE ? 0 : 240);
+  setTimeout(() => { el.classList.remove("open", "closing"); after && after(); }, reduceMotion ? 0 : 240);
 }
 
 /* ---------------- player + cloud save ---------------- */
 const playerOv = $("#playerOv"), playerBox = $("#playerBox"), frame = $("#frame");
 let current = null, fromCard = null, savedTimer = null;
 
-// Injected into every game: replaces localStorage with a copy that syncs to your vault.
-function saveShim(data) {
+// Injected into every game: cloud-synced localStorage, pause support,
+// panic-key forwarding and activity pings for auto-lock.
+function saveShim(data, opts = {}) {
   const json = JSON.stringify(data || {}).replace(/</g, "\\u003c");
-  return `<script>(function(){var INIT=${json};
+  const pk = JSON.stringify(settings.panicKey || "").replace(/</g, "\\u003c");
+  const sync = opts.sync === false ? "false" : "true";
+  return `<script>(function(){var INIT=${json},PK=${pk},SYNC=${sync},W=window;
+var _st=W.setTimeout.bind(W),_ct=W.clearTimeout.bind(W),_si=W.setInterval.bind(W),_raf=W.requestAnimationFrame.bind(W),_caf=W.cancelAnimationFrame.bind(W),_now=performance.now.bind(performance);
+var P={on:false,off:0,since:0,raf:[],tq:[],media:[],ctx:[]},map={},rid=0;
+function sched(id,cb){map[id]=_raf(function(t){delete map[id];if(P.on){P.raf.push([id,cb]);return}cb(t-P.off)})}
+try{performance.now=function(){return (P.on?P.since:_now())-P.off}}catch(e){}
+W.requestAnimationFrame=function(cb){var id=++rid;if(P.on)P.raf.push([id,cb]);else sched(id,cb);return id};
+W.cancelAnimationFrame=function(id){if(map[id]){_caf(map[id]);delete map[id]}P.raf=P.raf.filter(function(x){return x[0]!==id})};
+W.setTimeout=function(fn,ms){if(typeof fn!=="function")return _st.apply(W,arguments);var a=[].slice.call(arguments,2);return _st(function(){if(P.on){P.tq.push(function(){fn.apply(W,a)});return}fn.apply(W,a)},ms)};
+W.setInterval=function(fn,ms){if(typeof fn!=="function")return _si.apply(W,arguments);var a=[].slice.call(arguments,2);return _si(function(){if(!P.on)fn.apply(W,a)},ms)};
+["AudioContext","webkitAudioContext"].forEach(function(n){var A=W[n];if(!A||!W.Proxy||!W.Reflect)return;try{W[n]=new Proxy(A,{construct:function(t,args,nt){var c=Reflect.construct(t,args,nt);P.ctx.push(c);return c}})}catch(e){}});
+function pause(){if(P.on)return;P.on=true;P.since=_now();
+var ms=document.querySelectorAll("audio,video");for(var i=0;i<ms.length;i++){if(!ms[i].paused){ms[i].pause();P.media.push(ms[i])}}
+P.ctx.forEach(function(c){if(c.state==="running"){c.__np=1;try{c.suspend()}catch(e){}}});flush()}
+function resume(){if(!P.on)return;P.off+=_now()-P.since;P.on=false;
+P.media.splice(0).forEach(function(m){var p=m.play();if(p&&p.catch)p.catch(function(){})});
+P.ctx.forEach(function(c){if(c.__np){c.__np=0;try{c.resume()}catch(e){}}});
+P.raf.splice(0).forEach(function(x){sched(x[0],x[1])});
+P.tq.splice(0).forEach(function(f){_st(f,0)})}
 function mk(init,sync){var o=Object.create(null),h=Object.prototype.hasOwnProperty;for(var k in init)o[k]=String(init[k]);
 var api={getItem:function(k){k=String(k);return h.call(o,k)?o[k]:null},setItem:function(k,v){o[String(k)]=String(v);sync&&sync(o)},removeItem:function(k){delete o[String(k)];sync&&sync(o)},clear:function(){for(var k in o)delete o[k];sync&&sync(o)},key:function(i){var ks=Object.keys(o);return i>=0&&i<ks.length?ks[i]:null}};
 return new Proxy(api,{get:function(t,p){if(p==="length")return Object.keys(o).length;if(typeof p==="symbol")return t[p];if(p in t)return t[p];return api.getItem(p)},set:function(t,p,v){if(!(p in t))api.setItem(p,v);return true},deleteProperty:function(t,p){api.removeItem(p);return true},has:function(t,p){return p in t||h.call(o,p)},ownKeys:function(){return Object.keys(o)},getOwnPropertyDescriptor:function(t,p){return h.call(o,p)?{value:o[p],enumerable:true,configurable:true,writable:true}:undefined}})}
-var timer=null,last=null;function send(){timer=null;try{parent.postMessage({nebulaSave:1,data:JSON.stringify(last)},"*")}catch(e){}}
-function sync(o){last=o;if(!timer)timer=setTimeout(send,500)}function flush(){if(timer){clearTimeout(timer);send()}}
+var timer=null,last=null;function send(){timer=null;if(!SYNC||!last)return;try{parent.postMessage({nebulaSave:1,data:JSON.stringify(last)},"*")}catch(e){}}
+function sync(o){last=o;if(!timer)timer=_st(send,500)}function flush(){if(timer){_ct(timer);send()}}
 var L=mk(INIT,sync),S=mk({},null);
-try{Object.defineProperty(window,"localStorage",{value:L,configurable:true})}catch(e){}
-try{Object.defineProperty(window,"sessionStorage",{value:S,configurable:true})}catch(e){}
-window.nebulaSave={get:function(k){return L.getItem(k)},set:function(k,v){L.setItem(k,v)},remove:function(k){L.removeItem(k)},flush:flush};
-addEventListener("message",function(e){if(e.data&&e.data.nebulaFlush)flush()});addEventListener("pagehide",flush);
+try{Object.defineProperty(W,"localStorage",{value:L,configurable:true})}catch(e){}
+try{Object.defineProperty(W,"sessionStorage",{value:S,configurable:true})}catch(e){}
+W.nebulaSave={get:function(k){return L.getItem(k)},set:function(k,v){L.setItem(k,v)},remove:function(k){L.removeItem(k)},flush:flush};
+addEventListener("message",function(e){var d=e.data;if(!d||e.source!==parent)return;if(d.nebulaFlush)flush();if(d.nebulaPause)pause();if(d.nebulaResume)resume()});
+addEventListener("pagehide",flush);
+function typing(t){return !!t&&(t.isContentEditable||/^(TEXTAREA|SELECT)$/.test(t.tagName)||(t.tagName==="INPUT"&&!/^(checkbox|radio|button|range|submit|reset|color|file)$/i.test(t.type)))}
+addEventListener("keydown",function(e){if(PK&&e.key===PK&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!typing(e.target)){e.preventDefault();e.stopImmediatePropagation();try{parent.postMessage({nebulaPanic:1},"*")}catch(x){}}},true);
+var lp=0;function ping(){var n=Date.now();if(n-lp>15000){lp=n;try{parent.postMessage({nebulaActive:1},"*")}catch(x){}}}
+["pointerdown","keydown","wheel","touchstart"].forEach(function(ev){addEventListener(ev,ping,{capture:true,passive:true})});
 })();<\/script>`;
 }
 function inject(html, shim) {
@@ -745,9 +908,10 @@ async function openPlayer(id, cardEl) {
   $("#pTitle").textContent = a.name || "Untitled";
   $("#pFav").classList.toggle("on", !!state.favs[id]);
   $("#pSaved").classList.remove("on");
+  setPaused(false, true);
   frame.classList.remove("ready"); frame.removeAttribute("srcdoc"); $("#pSpin").classList.remove("hidden");
   show(playerOv);
-  if (fromCard && !REDUCE) {
+  if (fromCard && !reduceMotion) {
     const s = fromCard.getBoundingClientRect(), dr = playerBox.getBoundingClientRect();
     anim(playerBox, [
       { transform: `translate(${s.left - dr.left}px,${s.top - dr.top}px) scale(${s.width / dr.width},${s.height / dr.height})`, transformOrigin: "0 0", opacity: .2, borderRadius: "40px" },
@@ -770,20 +934,21 @@ async function closePlayer() {
   await flushGame();
   if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
   const target = fromCard && fromCard.isConnected ? fromCard.getBoundingClientRect() : null;
-  if (target && !REDUCE && target.width) {
+  if (target && !reduceMotion && target.width) {
     const dr = playerBox.getBoundingClientRect();
     anim(playerBox, [
       { transform: "none", transformOrigin: "0 0", opacity: 1 },
       { transform: `translate(${target.left - dr.left}px,${target.top - dr.top}px) scale(${target.width / dr.width},${target.height / dr.height})`, transformOrigin: "0 0", opacity: 0, borderRadius: "40px" }
     ], { duration: 260, fill: "forwards" })?.finished.then(a => a.cancel()).catch(() => {});
   }
-  hide(playerOv, () => { frame.removeAttribute("srcdoc"); current = null; fromCard = null; });
+  hide(playerOv, () => { frame.removeAttribute("srcdoc"); current = null; fromCard = null; setPaused(false, true); });
 }
 $("#pClose").onclick = closePlayer;
 $("#pFav").onclick = () => current && toggleFav(current, $("#pFav"));
 $("#pReload").onclick = async () => {
   if (!current) return;
   await flushGame();
+  setPaused(false, true);
   const id = current, save = await store.getSave(id).catch(() => ({}));
   frame.classList.remove("ready"); $("#pSpin").classList.remove("hidden");
   frame.srcdoc = inject(state.cache.get(id) || "", saveShim(save));
@@ -815,6 +980,8 @@ function openEditor(id = null) {
   $("#dropTxt").textContent = id ? "Drop a new .html file to replace (optional)" : "Drop an .html file or click to choose";
   $("#edDelete").classList.toggle("hidden", !id);
   $("#edReset").classList.toggle("hidden", !id);
+  $("#edCode").classList.toggle("hidden", !id);
+  $("#edPaste").value = ""; setSrc("file");
   $("#edFile").value = ""; $("#edImg").value = "";
   showThumb(id && isImg(state.thumbs[id]) ? state.thumbs[id] : null);
   show(editorOv);
@@ -880,19 +1047,44 @@ $("#edReset").onclick = async () => {
   if (!(await askDeletePassword("Reset save data?", "Clears this game's saved progress. Enter the delete password."))) return;
   try { await store.clearSave(id); toast("Save data cleared."); } catch { toast("Couldn't clear save data."); }
 };
+let edMode = "file", pasteT;
+function setSrc(m) {
+  edMode = m;
+  $("#srcSeg").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.v === m));
+  drop.classList.toggle("hidden", m !== "file");
+  $("#edPaste").classList.toggle("hidden", m !== "paste");
+  if (m === "paste") setTimeout(() => $("#edPaste").focus(), 40);
+}
+$("#srcSeg").addEventListener("click", e => { const b = e.target.closest("button[data-v]"); if (b) setSrc(b.dataset.v); });
+$("#edPaste").addEventListener("input", () => {
+  clearTimeout(pasteT);
+  pasteT = setTimeout(() => {
+    const v = $("#edPaste").value;
+    if ($("#edName").value || !v) return;
+    const t = new DOMParser().parseFromString(v, "text/html").title?.trim();
+    if (t) $("#edName").value = t.slice(0, 60);
+  }, 250);
+});
+$("#edCode").onclick = () => { const id = edId; closeEditor(); setTimeout(() => openCode(id), 120); };
 $("#edForm").addEventListener("submit", async e => {
   e.preventDefault();
   const name = $("#edName").value.trim();
   if (!name) return;
-  if (!edId && edHtml == null) return shake(drop);
-  if (edId && edHtml != null && !(await askDeletePassword("Replace file?", "Replacing overwrites the old file. Enter the delete password."))) return;
+  let html = edHtml;
+  if (edMode === "paste") {
+    const v = $("#edPaste").value;
+    html = v.trim() ? v : null;
+    if (html != null && new Blob([html]).size > MAX_BYTES) return toast("That's too large (max about 9.5 MB).");
+  }
+  if (!edId && html == null) return shake(edMode === "paste" ? $("#edPaste") : drop);
+  if (edId && html != null && !(await askDeletePassword("Replace file?", "Replacing overwrites the old file. Enter the delete password."))) return;
   const save = $("#edSave"); save.disabled = true;
   const id = edId || store.newId(), old = state.apps[id] || {};
   const meta = { name, desc: $("#edDesc").value.trim(), added: old.added || Date.now(), updated: Date.now() };
-  if (edHtml != null) meta.size = new Blob([edHtml]).size;
+  if (html != null) meta.size = new Blob([html]).size;
   try {
-    await store.saveApp(id, meta, edHtml, edThumb);
-    if (edHtml != null) state.cache.set(id, edHtml);
+    await store.saveApp(id, meta, html, edThumb);
+    if (html != null) state.cache.set(id, html);
     closeEditor();
   } catch (err) { console.error(err); toast("Save failed."); }
   save.disabled = false;
@@ -924,25 +1116,208 @@ $("#cfForm").addEventListener("submit", async e => {
 });
 
 /* ---------------- lock, keys, toast ---------------- */
-$("#lockBtn").onclick = async () => {
+$("#lockBtn").onclick = () => lockNow();
+async function lockNow() {
+  if (current) await flushGame();
   ss.del("nebula.k"); ls.del("nebula.trust");
   await anim(document.body, [{ opacity: 1, filter: "blur(0)" }, { opacity: 0, filter: "blur(6px)" }], { duration: 380, fill: "forwards" })?.finished.catch(() => {});
   location.reload();
-};
+}
 addEventListener("keydown", e => {
   if (e.key === "Escape") {
     if (confirmOv.classList.contains("open")) closeConfirm(false);
+    else if (codeOv.classList.contains("open")) closeCode();
+    else if (settingsOv.classList.contains("open")) closeSettings();
     else if (editorOv.classList.contains("open")) closeEditor();
     else closePlayer();
+    return;
   }
-  const typing = /input|textarea/i.test(document.activeElement?.tagName);
-  if (e.key === "/" && !typing && $("#app").classList.contains("active")) { e.preventDefault(); $("#q").focus(); }
+  if (paused && (e.key === " " || e.key === "Enter")) { e.preventDefault(); setPaused(false); return; }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k" && $("#app").classList.contains("active")) { e.preventDefault(); $("#q").focus(); $("#q").select(); }
 });
 function toast(t) {
   const el = document.createElement("div"); el.className = "toast"; el.textContent = t;
   $("#toasts").appendChild(el);
   setTimeout(() => { el.classList.add("out"); setTimeout(() => el.remove(), 300); }, 2400);
 }
+
+/* ---------------- settings ---------------- */
+const settingsOv = $("#settingsOv");
+let recordingKey = false, remoteSettingsSeen = false, settingsTimer;
+const keyLabel = k => k === " " ? "Space" : k;
+function applySettings() {
+  reduceMotion = RM.matches || settings.motion === "reduced";
+  document.body.classList.toggle("reduce", settings.motion === "reduced");
+  const st = document.documentElement.style;
+  st.setProperty("--card-min", { small: "180px", medium: "230px", large: "300px" }[settings.cardSize]);
+  st.setProperty("--mcols", { small: 3, medium: 2, large: 1 }[settings.cardSize]);
+}
+function fillSettings() {
+  if (document.activeElement !== $("#sUrl")) $("#sUrl").value = settings.panicUrl;
+  if (!recordingKey) $("#sKey").textContent = keyLabel(settings.panicKey);
+  const sw = $("#sPause"); sw.classList.toggle("on", settings.autoPause); sw.setAttribute("aria-checked", String(settings.autoPause));
+  settingsOv.querySelectorAll(".seg").forEach(seg => seg.querySelectorAll("button").forEach(b => b.classList.toggle("on", String(settings[seg.dataset.k]) === b.dataset.v)));
+}
+function saveSettings() {
+  ls.set("nebula.settings", settings); applySettings(); fillSettings();
+  clearTimeout(settingsTimer);
+  settingsTimer = setTimeout(() => { store?.putSettings?.(JSON.stringify(settings)).catch(() => {}); }, 400);
+}
+function stopRecording() { recordingKey = false; $("#sKey").classList.remove("rec"); fillSettings(); }
+function closeSettings() { if (recordingKey) stopRecording(); hide(settingsOv); }
+$("#settingsBtn").onclick = () => { fillSettings(); show(settingsOv); };
+$("#sDone").onclick = closeSettings;
+settingsOv.addEventListener("click", e => { if (e.target === settingsOv) closeSettings(); });
+settingsOv.querySelectorAll(".seg").forEach(seg => seg.addEventListener("click", e => {
+  const b = e.target.closest("button[data-v]"); if (!b) return;
+  const k = seg.dataset.k; settings[k] = k === "autoLock" ? +b.dataset.v : b.dataset.v; saveSettings();
+}));
+$("#sPause").onclick = () => { settings.autoPause = !settings.autoPause; saveSettings(); };
+$("#sUrl").addEventListener("change", () => {
+  let v = $("#sUrl").value.trim();
+  if (v && !/^https?:\/\//i.test(v)) v = "https://" + v;
+  try {
+    const u = new URL(v); if (!/^https?:$/.test(u.protocol)) throw 0;
+    settings.panicUrl = u.href; saveSettings(); toast("Panic link updated.");
+  } catch { $("#sUrl").value = settings.panicUrl; toast("That link doesn't look right."); }
+});
+$("#sReset").onclick = () => { settings = { ...DEFAULTS }; saveSettings(); toast("Settings reset."); };
+$("#sKey").onclick = () => { recordingKey = true; $("#sKey").classList.add("rec"); $("#sKey").textContent = "Press a key…"; };
+addEventListener("keydown", e => {
+  if (!recordingKey) return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  if (["Shift", "Control", "Alt", "Meta", "CapsLock"].includes(e.key)) return; // wait for the real key
+  if (!["Escape", "Tab", "Enter", "Backspace"].includes(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    settings.panicKey = e.key; recordingKey = false; saveSettings(); toast(`Panic key set to ${keyLabel(e.key)}.`);
+  }
+  stopRecording();
+}, true);
+
+/* ---------------- code editor ---------------- */
+const codeOv = $("#codeOv"), cText = $("#cText"), cGut = $("#cGut"), cFrame = $("#cFrame");
+let cId = null, cOrig = "", cPreview = false, cDiscard = 0, cPrevT;
+const cDirty = () => cId != null && cText.value !== cOrig;
+function cStatus() { $("#cStat").textContent = cDirty() ? "Unsaved changes" : ""; $("#cSave").disabled = !cDirty(); }
+function cLines() {
+  const n = cText.value.split("\n").length;
+  if (+cGut.dataset.n !== n) { cGut.dataset.n = n; let t = ""; for (let i = 1; i <= n; i++) t += i + "\n"; cGut.textContent = t; }
+  cGut.scrollTop = cText.scrollTop;
+}
+async function openCode(id) {
+  const a = state.apps[id]; if (!a) return;
+  cId = id; cOrig = ""; $("#cTitle").textContent = a.name || "Untitled";
+  cText.value = ""; cText.disabled = true; cGut.dataset.n = ""; cGut.textContent = ""; setPreview(false); cStatus();
+  show(codeOv);
+  try {
+    let h = state.cache.get(id);
+    if (h == null) { h = await store.getFile(id); if (h == null) throw 0; state.cache.set(id, h); }
+    if (cId !== id) return;
+    cOrig = h; cText.value = h; cText.disabled = false;
+    cText.setSelectionRange(0, 0); cText.scrollTop = 0; cLines(); cStatus(); cText.focus();
+  } catch { toast("Couldn't load the code."); closeCode(true); }
+}
+function closeCode(force) {
+  if (!force && cDirty() && Date.now() - cDiscard > 3000) {
+    cDiscard = Date.now(); $("#cStat").textContent = "Unsaved changes. Press back again to discard."; return;
+  }
+  hide(codeOv, () => { cFrame.removeAttribute("srcdoc"); cId = null; codeOv.classList.remove("previewing"); });
+}
+function runPreview() { cFrame.srcdoc = inject(cText.value, saveShim({}, { sync: false })); }
+function setPreview(on) {
+  cPreview = on; codeOv.classList.toggle("previewing", on); $("#cPrev").classList.toggle("on", on);
+  $("#cPrev").textContent = on && innerWidth <= 800 ? "Code" : "Preview";
+  if (on) runPreview(); else cFrame.removeAttribute("srcdoc");
+}
+function cInsert(text) {
+  let ok = false;
+  try { ok = document.execCommand("insertText", false, text); } catch {}
+  if (!ok) { cText.setRangeText(text, cText.selectionStart, cText.selectionEnd, "end"); cText.dispatchEvent(new Event("input")); }
+}
+async function saveCode() {
+  if (!cDirty()) return;
+  const id = cId, text = cText.value, size = new Blob([text]).size;
+  if (size > MAX_BYTES) return toast("That's too large (max about 9.5 MB).");
+  if (!(await askDeletePassword("Save changes?", "Saving overwrites the old file. Enter the delete password."))) return cText.focus();
+  $("#cSave").disabled = true;
+  try {
+    await store.saveApp(id, { updated: Date.now(), size }, text);
+    state.cache.set(id, text);
+    if (cId === id) { cOrig = text; cStatus(); }
+    toast("Saved.");
+  } catch (err) { console.error(err); toast("Save failed."); cStatus(); }
+  cText.focus();
+}
+cText.addEventListener("input", () => {
+  cLines(); cStatus();
+  if (cPreview) { clearTimeout(cPrevT); cPrevT = setTimeout(runPreview, 700); }
+});
+cText.addEventListener("scroll", () => { cGut.scrollTop = cText.scrollTop; });
+cText.addEventListener("keydown", e => {
+  const mod = e.ctrlKey || e.metaKey;
+  if (mod && e.key.toLowerCase() === "s") { e.preventDefault(); saveCode(); return; }
+  if (mod && e.key === "Enter") { e.preventDefault(); setPreview(true); return; }
+  if (e.key === "Tab") {
+    e.preventDefault();
+    const v = cText.value, s0 = cText.selectionStart, e0 = cText.selectionEnd;
+    if (s0 === e0 && !e.shiftKey) return cInsert("  ");
+    const start = v.lastIndexOf("\n", s0 - 1) + 1;
+    const endBase = e0 > s0 && v[e0 - 1] === "\n" ? e0 - 1 : e0;
+    let end = v.indexOf("\n", endBase); if (end < 0) end = v.length;
+    const block = v.slice(start, end);
+    const next = e.shiftKey ? block.replace(/^ {1,2}/gm, "") : block.replace(/^/gm, "  ");
+    cText.setSelectionRange(start, end); cInsert(next); cText.setSelectionRange(start, start + next.length);
+    return;
+  }
+  if (e.key === "Enter" && !mod && !e.shiftKey && !e.altKey) {
+    const v = cText.value, s0 = cText.selectionStart, start = v.lastIndexOf("\n", s0 - 1) + 1;
+    const indent = (v.slice(start, s0).match(/^[ \t]*/) || [""])[0];
+    e.preventDefault(); cInsert("\n" + indent);
+  }
+});
+$("#cClose").onclick = () => closeCode();
+$("#cPrev").onclick = () => setPreview(!cPreview);
+$("#cSave").onclick = saveCode;
+codeOv.addEventListener("click", e => { if (e.target === codeOv) closeCode(); });
+
+/* ---------------- auto-pause, panic key, auto-lock ---------------- */
+let paused = false, lastActive = Date.now();
+function setPaused(on, quiet) {
+  paused = on;
+  $("#pauseOv").classList.toggle("on", on);
+  if (quiet) return;
+  try { frame.contentWindow?.postMessage(on ? { nebulaPause: 1 } : { nebulaResume: 1 }, "*"); } catch {}
+  if (on) $("#pResume").focus({ preventScroll: true }); else frame.focus();
+}
+$("#pauseOv").addEventListener("click", () => setPaused(false));
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) return checkAutoLock();
+  if (!current) return;
+  if (settings.autoPause && !paused && frame.classList.contains("ready")) setPaused(true);
+  else try { frame.contentWindow?.postMessage({ nebulaFlush: 1 }, "*"); } catch {}
+});
+addEventListener("message", e => {
+  const d = e.data;
+  if (!d || !e.source || (e.source !== frame.contentWindow && e.source !== cFrame.contentWindow)) return;
+  if (d.nebulaPanic === 1) panicGo();
+  else if (d.nebulaActive === 1) lastActive = Date.now();
+});
+["pointerdown", "keydown", "wheel", "touchstart"].forEach(ev => addEventListener(ev, () => { lastActive = Date.now(); }, { capture: true, passive: true }));
+function checkAutoLock() {
+  const m = +settings.autoLock;
+  if (m && $("#app").classList.contains("active") && Date.now() - lastActive > m * 60e3) lockNow();
+}
+setInterval(checkAutoLock, 15e3);
+function panicGo() {
+  try { frame.contentWindow?.postMessage({ nebulaFlush: 1 }, "*"); } catch {}
+  location.replace(settings.panicUrl || DEFAULTS.panicUrl);
+}
+// The panic key works everywhere except while typing in a text box (the login box counts as "everywhere").
+const isTyping = el => !!el && el.id !== "pw" && (el.isContentEditable || /^(TEXTAREA|SELECT)$/.test(el.tagName) || (el.tagName === "INPUT" && !/^(checkbox|radio|button|range|submit|reset|color|file)$/i.test(el.type)));
+addEventListener("keydown", e => {
+  if (recordingKey || !settings.panicKey || e.key !== settings.panicKey || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (isTyping(document.activeElement)) return;
+  e.preventDefault(); e.stopImmediatePropagation(); panicGo();
+}, true);
 
 /* ---------------- panic button (triple-click) ---------------- */
 (() => {
@@ -954,13 +1329,14 @@ function toast(t) {
     n++; paint(); clearTimeout(t);
     if (n >= 3) {
       try { frame.contentWindow?.postMessage({ nebulaFlush: 1 }, "*"); } catch {}
-      location.replace(PANIC_URL); // replace: the back button won't return here
+      panicGo(); // replaces the page, so Back won't return here
       return;
     }
     t = setTimeout(() => { n = 0; paint(); }, 700);
   });
 })();
 
+applySettings();
 boot();
 </script>
 </body>
