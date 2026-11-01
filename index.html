@@ -453,7 +453,8 @@ const DEMO = !FIREBASE_CONFIG.apiKey || FIREBASE_CONFIG.apiKey.startsWith("PASTE
 const WEEK = 7 * 864e5;
 const SCHEDULE = [60e3, 5*60e3, 15*60e3, 60*60e3, 6*3600e3, 24*3600e3, 3*864e5, 7*864e5];
 const TILES = [["#22d3ee","#3b82f6"],["#3b82f6","#8b5cf6"],["#8b5cf6","#22d3ee"],["#06b6d4","#6366f1"]];
-const MAX_BYTES = 9.5 * 1024 * 1024;
+const MAX_BYTES = 25 * 1024 * 1024; // before compression
+const MAX_ENC = 9.9e6;              // Firebase limit per value, after compression + encryption
 const MAX_SAVE = 1.9e6;
 const RECENT_MAX = 10;
 const EASE = "cubic-bezier(.16,1,.3,1)";
@@ -483,6 +484,9 @@ const isPerm = e => /permission/i.test(String(e?.code || e?.message || e));
 const anim = (el, frames, opts) => reduceMotion || !el.animate ? null : el.animate(frames, { easing: EASE, ...opts });
 const ago = t => { const s = (Date.now() - t) / 1000; if (s < 60) return "just now"; const m = s / 60; if (m < 60) return `${Math.floor(m)} min ago`; const h = m / 60; if (h < 24) return `${Math.floor(h)} hr ago`; const d = Math.floor(h / 24); return d === 1 ? "yesterday" : `${d} days ago`; };
 
+/* Never run inside another site's frame (stops click-jacking tricks) */
+if (window.top !== window.self) { document.documentElement.innerHTML = ""; throw new Error("framed"); }
+
 /* No zooming (pinch, ctrl+wheel, ctrl +/-) */
 ["gesturestart", "gesturechange", "gestureend"].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), { passive: false }));
 document.addEventListener("touchmove", e => { if (e.touches.length > 1 || (e.scale && e.scale !== 1)) e.preventDefault(); }, { passive: false });
@@ -496,57 +500,129 @@ addEventListener("keydown", e => {
   if (k === "f12" || (mod && e.shiftKey && ["i","j","c"].includes(k)) || (mod && ["u","s"].includes(k))) e.preventDefault();
 });
 
-/* ---------------- data stores ---------------- */
+/* ---------------- crypto ----------------
+   Nothing secret lives in this file. Your password goes through one slow
+   PBKDF2 (600,000 rounds), then HKDF splits it into two unrelated secrets:
+     proof: shown to the database to open a session (never stored on the device)
+     key:   AES-256-GCM key that encrypts every game, name, thumbnail, save and
+            setting before it leaves this device. Firebase only ever holds gibberish.
+*/
+const TE = new TextEncoder(), TD = new TextDecoder();
+const hex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
 async function pbkdf2(pw, salt, iter) {
-  const enc = new TextEncoder();
-  const base = await crypto.subtle.importKey("raw", enc.encode(pw.normalize("NFC")), "PBKDF2", false, ["deriveBits"]);
-  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: enc.encode(salt), iterations: iter, hash: "SHA-256" }, base, 256);
-  return [...new Uint8Array(bits)].map(b => b.toString(16).padStart(2, "0")).join("");
+  const base = await crypto.subtle.importKey("raw", TE.encode(pw.normalize("NFC")), "PBKDF2", false, ["deriveBits"]);
+  return hex(await crypto.subtle.deriveBits({ name: "PBKDF2", salt: TE.encode(salt), iterations: iter, hash: "SHA-256" }, base, 256));
+}
+async function deriveAll(pw, salt, iter) {
+  const base = await crypto.subtle.importKey("raw", TE.encode(pw.normalize("NFC")), "PBKDF2", false, ["deriveBits"]);
+  const master = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: TE.encode(salt), iterations: iter, hash: "SHA-256" }, base, 256);
+  const hk = await crypto.subtle.importKey("raw", master, "HKDF", false, ["deriveBits", "deriveKey"]);
+  const prm = info => ({ name: "HKDF", hash: "SHA-256", salt: TE.encode("nebula-hkdf"), info: TE.encode(info) });
+  const proof = hex(await crypto.subtle.deriveBits(prm("login"), hk, 256));
+  const key = await crypto.subtle.deriveKey(prm("enc"), hk, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+  return { proof, key }; // key is non-extractable: even this page can't read its raw bytes
+}
+const toB64 = u8 => new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => { const t = String(fr.result); res(t.slice(t.indexOf(",") + 1)); }; fr.onerror = () => rej(fr.error); fr.readAsDataURL(new Blob([u8])); });
+const fromB64 = async b => new Uint8Array(await (await fetch("data:application/octet-stream;base64," + b)).arrayBuffer());
+const CAN_ZIP = typeof CompressionStream === "function" && typeof DecompressionStream === "function";
+const gz = async (u8, T) => new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(new T("gzip"))).arrayBuffer());
+async function seal(key, aad, text, zip) {
+  zip = zip && CAN_ZIP;
+  let bytes = TE.encode(text);
+  if (zip) bytes = await gz(bytes, CompressionStream);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv, additionalData: TE.encode(aad) }, key, bytes));
+  const out = new Uint8Array(12 + ct.length); out.set(iv); out.set(ct, 12);
+  return (zip ? "z1:" : "e1:") + await toB64(out);
+}
+async function unseal(key, aad, s) {
+  if (!key || typeof s !== "string" || !/^[ez]1:/.test(s)) throw new Error("NOT_SEALED");
+  const buf = await fromB64(s.slice(3));
+  let bytes = new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv: buf.subarray(0, 12), additionalData: TE.encode(aad) }, key, buf.subarray(12)));
+  if (s[0] === "z") bytes = await gz(bytes, DecompressionStream);
+  return TD.decode(bytes);
 }
 
+/* ---------------- device key store ----------------
+   After you unlock, the (non-extractable) key is kept in this browser so a reload
+   doesn't ask again: per-tab if not remembered (gone when the tab closes),
+   or for 7 days if "Remember this device" is on. Lock wipes it.
+*/
+const keystore = (() => {
+  let dbp = null;
+  const open = () => dbp ??= new Promise((res, rej) => { const r = indexedDB.open("nebula-keys", 1); r.onupgradeneeded = () => r.result.createObjectStore("k"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+  const tx = async (mode, fn) => { const db = await open(); return new Promise((res, rej) => { const t = db.transaction("k", mode), q = fn(t.objectStore("k")); let out; if (q) q.onsuccess = () => out = q.result; t.oncomplete = () => res(out); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error); }); };
+  const get = k => tx("readonly", st => st.get(k)).catch(() => null);
+  const put = (k, v) => tx("readwrite", st => st.put(v, k));
+  const keys = () => tx("readonly", st => st.getAllKeys()).catch(() => []);
+  const del = k => tx("readwrite", st => st.delete(k)).catch(() => {});
+  const tabId = () => { let id = ss.get("nebula.sid"); if (!id) { id = hex(crypto.getRandomValues(new Uint8Array(16))); ss.set("nebula.sid", id); } return id; };
+  return {
+    async save(remember, key, uid) {
+      await this.clear();
+      const exp = Date.now() + (remember ? WEEK : 12 * 3600e3);
+      await put(remember ? "device" : "tab:" + tabId(), { key, uid, exp });
+    },
+    async load(uid) {
+      const mine = ss.get("nebula.sid");
+      for (const k of await keys()) if (String(k).startsWith("tab:") && k !== "tab:" + mine) await del(k); // closed tabs
+      const e = (mine && await get("tab:" + mine)) || await get("device");
+      if (e && e.key && e.uid === uid && e.exp > Date.now()) return e;
+      if (e) await this.clear();
+      return null;
+    },
+    async clear() { for (const k of await keys()) await del(k); },
+    forgetTab() { ss.del("nebula.sid"); },
+  };
+})();
+
+/* ---------------- database (raw, holds only ciphertext) ---------------- */
 async function realStore(cfg) {
-  const [{ initializeApp }, { getAuth, signInAnonymously }, d] = await Promise.all([
+  const [{ initializeApp }, { getAuth, signInAnonymously, onAuthStateChanged }, d] = await Promise.all([
     import(FB + "firebase-app.js"), import(FB + "firebase-auth.js"), import(FB + "firebase-database.js")
   ]);
-  const app = initializeApp(cfg), db = d.getDatabase(app);
+  const app = initializeApp(cfg), db = d.getDatabase(app), auth = getAuth(app);
   let offset = 0;
   d.onValue(d.ref(db, ".info/serverTimeOffset"), s => offset = s.val() || 0);
-  const { user } = await signInAnonymously(getAuth(app));
-  const uid = user.uid;
+  const existing = await new Promise(res => { const un = onAuthStateChanged(auth, u => { un(); res(u); }); });
+  const uid = (existing || (await signInAnonymously(auth)).user).uid;
   const conf = (await d.get(d.ref(db, "config"))).val();
-  if (!conf || !conf.salt) throw new Error("NOSETUP");
-  const iter = conf.iter || 310000;
-  let key = null;
-  const r = p => d.ref(db, `vault/${key}/${p}`);
+  if (!conf || !conf.salt || conf.v !== 2) throw new Error("NOSETUP");
+  const iter = conf.iter || 600000;
+  let vid = null;
+  const r = p => d.ref(db, `vault/${vid}/${p}`);
+  const sess = p => d.ref(db, `sessions/${uid}${p ? "/" + p : ""}`);
+  const now = () => Date.now() + offset;
   return {
-    now: () => Date.now() + offset,
-    derive: pw => pbkdf2(pw, conf.salt, iter),
+    uid, config: { salt: conf.salt, iter }, now,
     getLock: async () => (await d.get(d.ref(db, `locks/${uid}`))).val(),
     putLock: rec => d.set(d.ref(db, `locks/${uid}`), rec),
-    async tryKey(k) {
-      try { const s = await d.get(d.ref(db, `vault/${k}/meta`)); if (s.exists()) { key = k; return true; } return false; }
+    async lookup(proof) {
+      try { const v = (await d.get(d.ref(db, `logins/${proof}`))).val(); return typeof v === "string" ? v : null; }
       catch (e) { if (isPerm(e)) return "locked"; throw e; }
     },
-    watch: (name, cb) => d.onValue(r(name), s => cb(s.val() || {})),
-    getFile: async id => (await d.get(r(`files/${id}`))).val(),
-    newId: () => d.push(r("apps")).key,
-    async saveApp(id, meta, html, thumb) {
-      const u = {};
-      for (const [k, v] of Object.entries(meta)) u[`apps/${id}/${k}`] = v;
-      if (html != null) u[`files/${id}`] = html;
-      if (thumb !== undefined) u[`thumbs/${id}`] = thumb;
-      await d.update(d.ref(db, `vault/${key}`), u);
+    async startSession(id, proof, remember) {
+      await d.remove(sess()).catch(() => {});
+      await d.set(sess(), { k: id, p: proof, exp: now() + (remember ? WEEK : 12 * 3600e3) - 60e3, r: !!remember });
+      vid = id;
     },
-    deleteApp: id => d.update(d.ref(db, `vault/${key}`), { [`apps/${id}`]: null, [`files/${id}`]: null, [`thumbs/${id}`]: null, [`favs/${id}`]: null, [`recent/${id}`]: null, [`saves/${id}`]: null }),
-    setFav: (id, on) => d.set(r(`favs/${id}`), on ? true : null),
-    markPlayed: id => d.set(r(`recent/${id}`), d.serverTimestamp()),
-    dropRecent: ids => d.update(d.ref(db, `vault/${key}`), Object.fromEntries(ids.map(id => [`recent/${id}`, null]))),
-    getSave: async id => { const v = (await d.get(r(`saves/${id}`))).val(); return safe(() => JSON.parse(v), null) || {}; },
-    putSave: (id, str) => d.set(r(`saves/${id}`), str),
-    clearSave: id => d.set(r(`saves/${id}`), null),
-    putSettings: str => d.set(r("settings"), str),
-    // Delete password: the database only accepts this write if the hash matches,
-    // and then allows deletes/replacements for 10 minutes.
+    async resumeSession() {
+      try {
+        const [k, exp] = await Promise.all([d.get(sess("k")), d.get(sess("exp"))]);
+        if (typeof k.val() !== "string" || !(exp.val() > now())) return false;
+        vid = k.val(); return true;
+      } catch { return false; }
+    },
+    endSession: () => d.remove(sess()),
+    getMeta: async () => (await d.get(r("meta"))).val(),
+    watch: (name, cb) => d.onValue(r(name), s => cb(s.val()), e => console.warn("listen", name, e?.code)),
+    get: async p => (await d.get(r(p))).val(),
+    set: (p, v) => d.set(r(p), v),
+    update: obj => d.update(d.ref(db, `vault/${vid}`), obj),
+    newId: () => d.push(r("apps")).key,
+    serverTime: () => d.serverTimestamp(),
+    // Delete password: the database only accepts this write if the hash matches
+    // (and you have a session), then allows deletes/replacements for 10 minutes.
     async elevate(pw) {
       const k = await pbkdf2(pw, conf.salt + ":delete", iter);
       try { await d.set(d.ref(db, `admins/${uid}`), { k, t: d.serverTimestamp() }); return true; }
@@ -556,34 +632,110 @@ async function realStore(cfg) {
 }
 
 function demoStore() {
-  let lock = null, n = 0;
-  const data = { apps: {}, thumbs: {}, favs: {}, recent: {}, saves: {}, settings: "" }, files = {}, subs = {};
-  const emit = name => subs[name] && subs[name](typeof data[name] === "object" ? { ...data[name] } : data[name]);
-  const emitAll = () => Object.keys(data).forEach(emit);
+  let lock = null, n = 0, session = null, demoProof = null;
+  const config = { salt: "nebula-demo-salt", iter: 600000 };
+  const data = { apps: {}, thumbs: {}, favs: {}, recent: {}, saves: {}, files: {}, settings: null }, subs = {};
+  const emit = a => subs[a] && subs[a](data[a] && typeof data[a] === "object" ? { ...data[a] } : data[a]);
+  const setPath = (p, v) => { const [a, b] = p.split("/"); if (b === undefined) data[a] = v; else if (v === null) delete data[a][b]; else data[a][b] = v; emit(a); };
   return {
-    now: () => Date.now(),
-    derive: async pw => (await sleep(400), pw === "nebula-demo" ? "demo" : "x"),
+    uid: "demo-user", config, now: () => Date.now(),
     getLock: async () => lock && { ...lock },
-    putLock: async r => { lock = { ...r }; },
-    tryKey: async k => (lock && lock.until > Date.now()) ? "locked" : k === "demo",
-    watch: (name, cb) => { subs[name] = cb; emit(name); },
-    getFile: async id => (await sleep(150), files[id]),
-    newId: () => "a" + (++n) + Date.now(),
-    saveApp: async (id, meta, html, thumb) => {
-      data.apps[id] = { ...(data.apps[id] || {}), ...meta };
-      if (html != null) files[id] = html;
-      if (thumb === null) delete data.thumbs[id]; else if (thumb !== undefined) data.thumbs[id] = thumb;
-      emitAll();
+    putLock: async x => { lock = { ...x }; },
+    async lookup(proof) {
+      await sleep(150);
+      if (lock && lock.until > Date.now()) return "locked";
+      demoProof ??= (await deriveAll("nebula-demo", config.salt, config.iter)).proof;
+      return proof === demoProof ? "demo-vault" : null;
     },
-    deleteApp: async id => { for (const k in data) if (typeof data[k] === "object") delete data[k][id]; delete files[id]; emitAll(); },
-    setFav: async (id, on) => { if (on) data.favs[id] = true; else delete data.favs[id]; emit("favs"); },
-    markPlayed: async id => { data.recent[id] = Date.now(); emit("recent"); },
-    dropRecent: async ids => { ids.forEach(id => delete data.recent[id]); emit("recent"); },
-    getSave: async id => safe(() => JSON.parse(data.saves[id]), null) || {},
-    putSave: async (id, s) => { data.saves[id] = s; },
-    clearSave: async id => { delete data.saves[id]; },
-    putSettings: async str => { data.settings = str; },
+    startSession: async (id, proof, remember) => { session = { exp: Date.now() + (remember ? WEEK : 12 * 3600e3) }; },
+    resumeSession: async () => !!(session && session.exp > Date.now()),
+    endSession: async () => { session = null; },
+    getMeta: async () => ({ v: 2 }),
+    watch: (name, cb) => { subs[name] = cb; emit(name); },
+    get: async p => { const [a, b] = p.split("/"); return b === undefined ? data[a] : (data[a][b] ?? null); },
+    set: async (p, v) => setPath(p, v),
+    update: async obj => { for (const [p, v] of Object.entries(obj)) setPath(p, v); },
+    newId: () => "a" + (++n) + Date.now(),
+    serverTime: () => Date.now(),
     elevate: async pw => (await sleep(400), pw === "delete-demo"),
+  };
+}
+
+/* ---------------- encrypted vault (what the app talks to) ---------------- */
+function secure(raw) {
+  let key = null, appsPlain = {};
+  const cache = new Map();
+  async function verify() {
+    const m = await raw.getMeta();
+    if (!m) throw new Error("NO_VAULT");
+    if (m.chk && (await unseal(key, "meta/chk", m.chk)) !== "nebula") throw new Error("WRONG_KEY");
+  }
+  async function decMap(prefix, obj, json) {
+    const out = {};
+    await Promise.all(Object.entries(obj || {}).map(async ([id, c]) => {
+      const hit = cache.get(prefix + id);
+      if (hit && hit.c === c) { out[id] = hit.v; return; }
+      try { const t = await unseal(key, prefix + id, c); const v = json ? JSON.parse(t) : t; cache.set(prefix + id, { c, v }); out[id] = v; }
+      catch { /* not decryptable with this key: hide it */ }
+    }));
+    return out;
+  }
+  return {
+    get uid() { return raw.uid; },
+    now: () => raw.now(), getLock: () => raw.getLock(), putLock: x => raw.putLock(x),
+    async login(pw, remember) {
+      const { proof, key: k } = await deriveAll(pw, raw.config.salt, raw.config.iter);
+      const vid = await raw.lookup(proof);
+      if (vid === "locked") return "locked";
+      if (!vid) return false;
+      try { await raw.startSession(vid, proof, remember); } catch (e) { if (isPerm(e)) return "locked"; throw e; }
+      key = k;
+      try { await verify(); } catch (e) { console.error(e); key = null; await raw.endSession().catch(() => {}); return false; }
+      await keystore.save(remember, k, raw.uid).catch(() => {});
+      return true;
+    },
+    async resume() {
+      const e = await keystore.load(raw.uid).catch(() => null);
+      if (!e) return false;
+      if (!(await raw.resumeSession())) { await keystore.clear().catch(() => {}); return false; }
+      key = e.key;
+      try { await verify(); return true; } catch { key = null; await keystore.clear().catch(() => {}); return false; }
+    },
+    async logout() { key = null; await Promise.allSettled([raw.endSession(), keystore.clear()]); keystore.forgetTab(); },
+    watch(name, cb) {
+      let seq = 0;
+      raw.watch(name, async v => {
+        const my = ++seq;
+        let out;
+        if (name === "apps") out = appsPlain = await decMap("app/", v, true);
+        else if (name === "thumbs") out = await decMap("thumb/", v, false);
+        else if (name === "settings") out = typeof v === "string" ? await unseal(key, "settings", v).catch(() => "") : "";
+        else out = v || {};
+        if (my === seq) cb(out);
+      });
+    },
+    getFile: async id => { const c = await raw.get(`files/${id}`); return c == null ? null : unseal(key, "file/" + id, c); },
+    newId: () => raw.newId(),
+    async saveApp(id, meta, html, thumb) {
+      const u = {};
+      if (meta) { const full = { ...(appsPlain[id] || {}), ...meta }; delete full.id; u[`apps/${id}`] = await seal(key, "app/" + id, JSON.stringify(full)); }
+      if (html != null) { const c = await seal(key, "file/" + id, html, true); if (c.length > MAX_ENC) throw new Error("TOO_BIG"); u[`files/${id}`] = c; }
+      if (thumb !== undefined) u[`thumbs/${id}`] = thumb === null ? null : await seal(key, "thumb/" + id, thumb);
+      await raw.update(u);
+    },
+    deleteApp: id => raw.update({ [`apps/${id}`]: null, [`files/${id}`]: null, [`thumbs/${id}`]: null, [`favs/${id}`]: null, [`recent/${id}`]: null, [`saves/${id}`]: null }),
+    setFav: (id, on) => raw.set(`favs/${id}`, on ? true : null),
+    markPlayed: id => raw.set(`recent/${id}`, raw.serverTime()),
+    dropRecent: ids => raw.update(Object.fromEntries(ids.map(id => [`recent/${id}`, null]))),
+    async getSave(id) {
+      const c = await raw.get(`saves/${id}`); if (c == null) return {};
+      const t = await unseal(key, "save/" + id, c).catch(() => null);
+      return (t && safe(() => JSON.parse(t), null)) || {};
+    },
+    putSave: async (id, str) => raw.set(`saves/${id}`, await seal(key, "save/" + id, str, true)),
+    clearSave: id => raw.set(`saves/${id}`, null),
+    putSettings: async str => raw.set("settings", await seal(key, "settings", str)),
+    elevate: pw => raw.elevate(pw),
   };
 }
 
@@ -612,7 +764,7 @@ async function recordFail() {
 
 $("#gateForm").addEventListener("submit", async e => {
   e.preventDefault();
-  if (busy) return;
+  if (busy || !store) return;
   const val = pw.value.trim();
   if (!val) return;
   msg.textContent = "";
@@ -620,19 +772,16 @@ $("#gateForm").addEventListener("submit", async e => {
   const started = Date.now();
   try {
     // While locked out, every attempt looks exactly like a wrong password.
-    if (isLocked()) { await sleep(700 - (Date.now() - started)); setBusy(false); return deny(); }
-    const k = await store.derive(val);
-    const r = await store.tryKey(k);
+    if (isLocked()) { await sleep(900 - (Date.now() - started)); setBusy(false); return deny(); }
+    const r = await store.login(val, $("#remember").checked);
     if (r === true) {
       if (lockRec && lockRec.fails) store.putLock({ ...lockRec, fails: 0 }).catch(() => {});
-      ss.set("nebula.k", k);
-      if ($("#remember").checked) ls.set("nebula.trust", { k, exp: Date.now() + WEEK }); else ls.del("nebula.trust");
       pw.value = "";
       return enter();
     }
     if (r === "locked") lockRec = await store.getLock().catch(() => lockRec);
     else lockRec = await recordFail();
-    await sleep(Math.max(0, 700 - (Date.now() - started)));
+    await sleep(Math.max(0, 900 - (Date.now() - started)));
     setBusy(false); deny();
   } catch (err) {
     console.error(err); setBusy(false);
@@ -651,15 +800,12 @@ function enter() {
 
 async function boot() {
   if (DEMO) $("#preview").classList.remove("hidden");
-  try { store = DEMO ? demoStore() : await realStore(FIREBASE_CONFIG); }
+  // leftovers from older versions stored the vault address in plain text; wipe them
+  ls.del("nebula.trust"); ss.del("nebula.k");
+  try { store = secure(DEMO ? demoStore() : await realStore(FIREBASE_CONFIG)); }
   catch (e) { console.error(e); msg.textContent = e.message === "NOSETUP" ? "Database not set up yet." : "Connection problem."; return; }
   lockRec = await store.getLock().catch(() => null);
-  const t = ls.get("nebula.trust", null);
-  const saved = ss.get("nebula.k") || (t && t.exp > Date.now() ? t.k : null);
-  if (saved && !isLocked()) {
-    if ((await store.tryKey(saved).catch(() => false)) === true) return enter();
-    ss.del("nebula.k"); ls.del("nebula.trust");
-  }
+  if (!isLocked() && await store.resume().catch(() => false)) return enter();
   setBusy(false);
   pw.disabled = false;
   pw.focus();
@@ -990,7 +1136,7 @@ const closeEditor = () => hide(editorOv);
 async function takeFile(f) {
   if (!f) return;
   if (!/\.html?$/i.test(f.name) && f.type !== "text/html") return toast("Choose an .html file.");
-  if (f.size > MAX_BYTES) return toast("That file is too large (max about 9.5 MB).");
+  if (f.size > MAX_BYTES) return toast("That file is too large (max 25 MB).");
   edHtml = await f.text();
   drop.classList.add("has"); $("#dropTxt").textContent = f.name;
   anim(drop, [{ transform: "scale(.98)" }, { transform: "none" }], { duration: 400 });
@@ -1074,7 +1220,7 @@ $("#edForm").addEventListener("submit", async e => {
   if (edMode === "paste") {
     const v = $("#edPaste").value;
     html = v.trim() ? v : null;
-    if (html != null && new Blob([html]).size > MAX_BYTES) return toast("That's too large (max about 9.5 MB).");
+    if (html != null && new Blob([html]).size > MAX_BYTES) return toast("That's too large (max 25 MB).");
   }
   if (!edId && html == null) return shake(edMode === "paste" ? $("#edPaste") : drop);
   if (edId && html != null && !(await askDeletePassword("Replace file?", "Replacing overwrites the old file. Enter the delete password."))) return;
@@ -1086,7 +1232,7 @@ $("#edForm").addEventListener("submit", async e => {
     await store.saveApp(id, meta, html, edThumb);
     if (html != null) state.cache.set(id, html);
     closeEditor();
-  } catch (err) { console.error(err); toast("Save failed."); }
+  } catch (err) { console.error(err); toast(err?.message === "TOO_BIG" ? "That file is too large, even compressed." : "Save failed."); }
   save.disabled = false;
 });
 $("#addBtn").onclick = () => openEditor();
@@ -1119,7 +1265,7 @@ $("#cfForm").addEventListener("submit", async e => {
 $("#lockBtn").onclick = () => lockNow();
 async function lockNow() {
   if (current) await flushGame();
-  ss.del("nebula.k"); ls.del("nebula.trust");
+  await store.logout().catch(() => {});
   await anim(document.body, [{ opacity: 1, filter: "blur(0)" }, { opacity: 0, filter: "blur(6px)" }], { duration: 380, fill: "forwards" })?.finished.catch(() => {});
   location.reload();
 }
@@ -1236,7 +1382,7 @@ function cInsert(text) {
 async function saveCode() {
   if (!cDirty()) return;
   const id = cId, text = cText.value, size = new Blob([text]).size;
-  if (size > MAX_BYTES) return toast("That's too large (max about 9.5 MB).");
+  if (size > MAX_BYTES) return toast("That's too large (max 25 MB).");
   if (!(await askDeletePassword("Save changes?", "Saving overwrites the old file. Enter the delete password."))) return cText.focus();
   $("#cSave").disabled = true;
   try {
@@ -1244,7 +1390,7 @@ async function saveCode() {
     state.cache.set(id, text);
     if (cId === id) { cOrig = text; cStatus(); }
     toast("Saved.");
-  } catch (err) { console.error(err); toast("Save failed."); cStatus(); }
+  } catch (err) { console.error(err); toast(err?.message === "TOO_BIG" ? "That's too large, even compressed." : "Save failed."); cStatus(); }
   cText.focus();
 }
 cText.addEventListener("input", () => {
@@ -1309,6 +1455,7 @@ function checkAutoLock() {
 setInterval(checkAutoLock, 15e3);
 function panicGo() {
   try { frame.contentWindow?.postMessage({ nebulaFlush: 1 }, "*"); } catch {}
+  keystore.forgetTab();
   location.replace(settings.panicUrl || DEFAULTS.panicUrl);
 }
 // The panic key works everywhere except while typing in a text box (the login box counts as "everywhere").
