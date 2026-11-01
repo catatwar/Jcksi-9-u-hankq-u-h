@@ -265,6 +265,13 @@ textarea.code:not(.hidden){animation:fade .3s var(--ease)}
 .switch.on::after{transform:translateX(18px)}
 @media (max-width:640px){.srow{flex-wrap:wrap}.seg button{padding:5px 9px}}
 
+/* game error readout */
+.errb{display:flex;width:auto;gap:5px;padding:0 9px;color:#fbbf24}
+.errb span{font-size:12px;font-weight:600;font-variant-numeric:tabular-nums}
+.errb.bump{animation:pop .4s var(--ease)}
+.enote{font-size:13px;color:var(--muted);margin:-8px 0 12px}
+.errlist{max-height:50vh;overflow:auto;margin:0 0 12px;padding:12px;border-radius:9px;background:var(--bg);border:1px solid var(--line);font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre-wrap;word-break:break-word;color:#fca5a5;user-select:text}
+
 /* user-chosen reduced motion */
 body.reduce *,body.reduce *::before,body.reduce *::after{animation:none!important;transition:none!important}
 </style>
@@ -326,6 +333,7 @@ body.reduce *,body.reduce *::before,body.reduce *::after{animation:none!importan
       <button class="ib" id="pClose" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
       <div class="t" id="pTitle"></div>
       <span class="saved" id="pSaved"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18a5 5 0 1 1 .9-9.9A6 6 0 0 1 19 10a4 4 0 0 1-1 7.9"/><path d="m9 15 2 2 4-4"/></svg>Saved</span>
+      <button class="ib errb hidden" id="pErr" aria-label="Game errors" title="Game errors"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.8 19.5h18.4z"/><path d="M12 10v4.5M12 17.3v.2"/></svg><span id="pErrN"></span></button>
       <button class="ib" id="pFav" aria-label="Favorite"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg></button>
       <button class="ib" id="pReload" aria-label="Restart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></button>
       <button class="ib" id="pFull" aria-label="Fullscreen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
@@ -333,7 +341,7 @@ body.reduce *,body.reduce *::before,body.reduce *::after{animation:none!importan
     <div class="stage" id="stage">
       <div class="spin" id="pSpin"></div>
       <div class="pause" id="pauseOv"><div><div class="pt">Paused</div><div class="ps">Click anywhere or press Space to resume</div><button type="button" class="btn pri" id="pResume">Resume</button></div></div>
-      <iframe id="frame" title="App" sandbox="allow-scripts allow-pointer-lock allow-forms allow-modals allow-popups allow-downloads" allow="fullscreen; gamepad; autoplay; clipboard-write" referrerpolicy="no-referrer"></iframe>
+      <iframe id="frame" title="App" sandbox="allow-scripts allow-pointer-lock allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-downloads" allow="fullscreen; gamepad; autoplay; clipboard-write" referrerpolicy="no-referrer"></iframe>
     </div>
   </div>
 </div>
@@ -412,6 +420,16 @@ body.reduce *,body.reduce *::before,body.reduce *::after{animation:none!importan
       <div class="srow"><span>Auto-lock when idle</span><div class="seg" data-k="autoLock"><button type="button" data-v="0">Off</button><button type="button" data-v="5">5m</button><button type="button" data-v="15">15m</button><button type="button" data-v="30">30m</button><button type="button" data-v="60">1h</button></div></div>
     </div>
     <div class="row"><button type="button" class="linkbtn" id="sReset">Reset to defaults</button><div class="sp"></div><button type="button" class="btn pri" id="sDone">Done</button></div>
+  </div>
+</div>
+
+<!-- GAME ERRORS -->
+<div class="overlay" id="errOv" role="dialog" aria-modal="true" aria-label="Game errors">
+  <div class="modal">
+    <h3>Game errors</h3>
+    <p class="enote">These come from the game's own code. Copy them and send them to Claude to get the game fixed.</p>
+    <pre class="errlist" id="errList"></pre>
+    <div class="row"><div class="sp"></div><button type="button" class="btn sec" id="errCopy">Copy</button><button type="button" class="btn pri" id="errDone">Close</button></div>
   </div>
 </div>
 
@@ -992,7 +1010,10 @@ function saveShim(data, opts = {}) {
   const json = JSON.stringify(data || {}).replace(/</g, "\\u003c");
   const pk = JSON.stringify(settings.panicKey || "").replace(/</g, "\\u003c");
   const sync = opts.sync === false ? "false" : "true";
-  return `<script>(function(){var INIT=${json},PK=${pk},SYNC=${sync},W=window;
+  const sess = JSON.stringify(opts.sess || {}).replace(/</g, "\\u003c");
+  const gen = Number(opts.gen) || 0;
+  return `<script>(function(){var ME=document.currentScript,INIT=${json},SINIT=${sess},GEN=${gen},PK=${pk},SYNC=${sync},W=window;
+function post(m){m.gen=GEN;try{parent.postMessage(m,"*")}catch(e){}}
 var _st=W.setTimeout.bind(W),_ct=W.clearTimeout.bind(W),_si=W.setInterval.bind(W),_raf=W.requestAnimationFrame.bind(W),_caf=W.cancelAnimationFrame.bind(W),_now=performance.now.bind(performance);
 var P={on:false,off:0,since:0,raf:[],tq:[],media:[],ctx:[]},map={},rid=0;
 function sched(id,cb){map[id]=_raf(function(t){delete map[id];if(P.on){P.raf.push([id,cb]);return}cb(t-P.off)})}
@@ -1013,18 +1034,27 @@ P.tq.splice(0).forEach(function(f){_st(f,0)})}
 function mk(init,sync){var o=Object.create(null),h=Object.prototype.hasOwnProperty;for(var k in init)o[k]=String(init[k]);
 var api={getItem:function(k){k=String(k);return h.call(o,k)?o[k]:null},setItem:function(k,v){o[String(k)]=String(v);sync&&sync(o)},removeItem:function(k){delete o[String(k)];sync&&sync(o)},clear:function(){for(var k in o)delete o[k];sync&&sync(o)},key:function(i){var ks=Object.keys(o);return i>=0&&i<ks.length?ks[i]:null}};
 return new Proxy(api,{get:function(t,p){if(p==="length")return Object.keys(o).length;if(typeof p==="symbol")return t[p];if(p in t)return t[p];return api.getItem(p)},set:function(t,p,v){if(!(p in t))api.setItem(p,v);return true},deleteProperty:function(t,p){api.removeItem(p);return true},has:function(t,p){return p in t||h.call(o,p)},ownKeys:function(){return Object.keys(o)},getOwnPropertyDescriptor:function(t,p){return h.call(o,p)?{value:o[p],enumerable:true,configurable:true,writable:true}:undefined}})}
-var timer=null,last=null;function send(){timer=null;if(!SYNC||!last)return;try{parent.postMessage({nebulaSave:1,data:JSON.stringify(last)},"*")}catch(e){}}
+var timer=null,last=null;function send(){timer=null;if(!SYNC||!last)return;post({nebulaSave:1,data:JSON.stringify(last)})}
 function sync(o){last=o;if(!timer)timer=_st(send,500)}function flush(){if(timer){_ct(timer);send()}}
-var L=mk(INIT,sync),S=mk({},null);
+var stimer=null,slast=null;function ssend(){stimer=null;if(slast)post({nebulaSess:1,data:JSON.stringify(slast)})}
+function ssync(o){slast=o;if(!stimer)stimer=_st(ssend,300)}
+var L=mk(INIT,sync),S=mk(SINIT,ssync);
 try{Object.defineProperty(W,"localStorage",{value:L,configurable:true})}catch(e){}
 try{Object.defineProperty(W,"sessionStorage",{value:S,configurable:true})}catch(e){}
 W.nebulaSave={get:function(k){return L.getItem(k)},set:function(k,v){L.setItem(k,v)},remove:function(k){L.removeItem(k)},flush:flush};
 addEventListener("message",function(e){var d=e.data;if(!d||e.source!==parent)return;if(d.nebulaFlush)flush();if(d.nebulaPause)pause();if(d.nebulaResume)resume()});
-addEventListener("pagehide",flush);
+addEventListener("pagehide",function(){flush();if(stimer){_ct(stimer);ssend()}post({nebulaNav:1})});
+var ne=0;function rep(m){if(ne++<40)post({nebulaErr:String(m).slice(0,600)})}
+addEventListener("error",function(e){var t=e.target;if(t&&t!==W){if(t.tagName==="SCRIPT")rep("Couldn't load script: "+(t.src||"inline"));return}
+rep((e.error&&e.error.stack?String(e.error.stack).split("\\n").slice(0,3).join("  "):(e.message||"Error"))+(e.lineno?" (line "+e.lineno+")":""))},true);
+addEventListener("unhandledrejection",function(e){var r=e.reason;rep("Unhandled promise: "+(r&&(r.code||r.message)?(r.code?r.code+" ":"")+(r.message||""):String(r)))});
+var ce=console.error;console.error=function(){try{rep([].map.call(arguments,function(a){return a&&a.message?a.message:typeof a==="object"?(function(){try{return JSON.stringify(a)}catch(x){return String(a)}})():String(a)}).join(" "))}catch(x){}return ce.apply(console,arguments)};
+document.addEventListener("click",function(e){var a=e.target&&e.target.closest&&e.target.closest("a[href]");if(!a)return;var h=a.getAttribute("href")||"";if(/^https?:/i.test(h)&&(!a.target||/^_(self|top|parent)$/i.test(a.target))){a.target="_blank";a.rel="noopener"}},true);
 function typing(t){return !!t&&(t.isContentEditable||/^(TEXTAREA|SELECT)$/.test(t.tagName)||(t.tagName==="INPUT"&&!/^(checkbox|radio|button|range|submit|reset|color|file)$/i.test(t.type)))}
 addEventListener("keydown",function(e){if(PK&&e.key===PK&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!typing(e.target)){e.preventDefault();e.stopImmediatePropagation();try{parent.postMessage({nebulaPanic:1},"*")}catch(x){}}},true);
 var lp=0;function ping(){var n=Date.now();if(n-lp>15000){lp=n;try{parent.postMessage({nebulaActive:1},"*")}catch(x){}}}
 ["pointerdown","keydown","wheel","touchstart"].forEach(function(ev){addEventListener(ev,ping,{capture:true,passive:true})});
+try{if(ME&&ME.parentNode)ME.parentNode.removeChild(ME)}catch(e){}
 })();<\/script>`;
 }
 function inject(html, shim) {
@@ -1033,11 +1063,59 @@ function inject(html, shim) {
   const i = m.index + m[0].length;
   return html.slice(0, i) + shim + html.slice(i);
 }
+let gen = 0, lastSave = {}, sessSnap = {}, navTimes = [], gameErrs = [];
+// (Re)load the current game from Nebula's own copy, with its latest save + tab storage.
+function loadGame(id) {
+  gen++;
+  frame.classList.remove("ready"); $("#pSpin").classList.remove("hidden");
+  frame.onload = () => { $("#pSpin").classList.add("hidden"); frame.classList.add("ready"); try { frame.focus(); } catch {} };
+  frame.srcdoc = inject(state.cache.get(id) || "", saveShim(lastSave, { gen, sess: sessSnap }));
+}
+// The game tried to reload or leave its page (e.g. an auto-update). Inside Nebula that
+// address doesn't exist (404), so reload Nebula's copy instead.
+function gameNavigated() {
+  const t = Date.now();
+  navTimes = navTimes.filter(x => t - x < 20000); navTimes.push(t);
+  if (navTimes.length > 4) {
+    gen++;
+    frame.srcdoc = "<body style='margin:0;height:100vh;display:grid;place-items:center;background:#05060a;color:#868ca3;font:14px system-ui;text-align:center;padding:20px'>This game kept trying to reload itself, so Nebula paused it.<br>Press restart to try again.</body>";
+    addGameErr("The game reloaded itself 5 times in 20 seconds, so Nebula stopped it.");
+    return;
+  }
+  loadGame(current);
+}
+function addGameErr(m) {
+  const prev = gameErrs[gameErrs.length - 1];
+  if (prev && prev.m === m) prev.n++; else gameErrs.push({ m, n: 1 });
+  if (gameErrs.length > 60) gameErrs.shift();
+  const total = gameErrs.reduce((a, x) => a + x.n, 0), b = $("#pErr");
+  $("#pErrN").textContent = total > 99 ? "99+" : total;
+  b.classList.remove("hidden", "bump"); void b.offsetWidth; b.classList.add("bump");
+  if ($("#errOv").classList.contains("open")) fillErrs();
+}
+function clearGameErrs() { gameErrs = []; $("#pErr").classList.add("hidden"); }
+function fillErrs() { $("#errList").textContent = gameErrs.map(x => (x.n > 1 ? `(${x.n}×) ` : "") + x.m).join("\n\n") || "No errors."; }
+$("#pErr").onclick = () => { fillErrs(); show($("#errOv")); };
+$("#errDone").onclick = () => hide($("#errOv"));
+$("#errOv").addEventListener("click", e => { if (e.target.id === "errOv") hide($("#errOv")); });
+$("#errCopy").onclick = async () => {
+  const text = `Errors from "${state.apps[current]?.name || "game"}" in Nebula:\n\n` + $("#errList").textContent;
+  try { await navigator.clipboard.writeText(text); toast("Copied."); } catch { toast("Select the text and copy it."); }
+};
 addEventListener("message", e => {
-  if (!current || e.source !== frame.contentWindow || !e.data || e.data.nebulaSave !== 1) return;
-  const s = e.data.data, id = current;
+  const dta = e.data;
+  if (!current || !dta || typeof dta !== "object") return;
+  // A game that is leaving its page sends its last messages from a window the browser
+  // has already swapped out, so also accept the current game's own sandboxed messages.
+  if (e.source !== frame.contentWindow && !(e.origin === "null" && dta.gen === gen)) return;
+  if (dta.nebulaSess === 1 && typeof dta.data === "string") { sessSnap = safe(() => JSON.parse(dta.data), sessSnap) || {}; return; }
+  if (dta.nebulaNav === 1) { if (dta.gen === gen) gameNavigated(); return; }
+  if (typeof dta.nebulaErr === "string") { addGameErr(dta.nebulaErr); return; }
+  if (dta.nebulaSave !== 1) return;
+  const s = dta.data, id = current;
   if (typeof s !== "string") return;
   if (s.length > MAX_SAVE) return toast("Save data is too large to sync.");
+  lastSave = safe(() => JSON.parse(s), lastSave) || lastSave;
   store.putSave(id, s).then(() => {
     const el = $("#pSaved"); el.classList.add("on");
     clearTimeout(savedTimer); savedTimer = setTimeout(() => el.classList.remove("on"), 1600);
@@ -1055,6 +1133,7 @@ async function openPlayer(id, cardEl) {
   $("#pFav").classList.toggle("on", !!state.favs[id]);
   $("#pSaved").classList.remove("on");
   setPaused(false, true);
+  gen++; navTimes = []; sessSnap = {}; lastSave = {}; clearGameErrs();
   frame.classList.remove("ready"); frame.removeAttribute("srcdoc"); $("#pSpin").classList.remove("hidden");
   show(playerOv);
   if (fromCard && !reduceMotion) {
@@ -1071,8 +1150,8 @@ async function openPlayer(id, cardEl) {
     if (h == null) throw 0;
     state.cache.set(id, h);
     if (current !== id) return;
-    frame.onload = () => { $("#pSpin").classList.add("hidden"); frame.classList.add("ready"); frame.focus(); };
-    frame.srcdoc = inject(h, saveShim(save));
+    lastSave = save || {};
+    loadGame(id);
   } catch { toast("Couldn't open that file."); closePlayer(); }
 }
 async function closePlayer() {
@@ -1087,7 +1166,7 @@ async function closePlayer() {
       { transform: `translate(${target.left - dr.left}px,${target.top - dr.top}px) scale(${target.width / dr.width},${target.height / dr.height})`, transformOrigin: "0 0", opacity: 0, borderRadius: "40px" }
     ], { duration: 260, fill: "forwards" })?.finished.then(a => a.cancel()).catch(() => {});
   }
-  hide(playerOv, () => { frame.removeAttribute("srcdoc"); current = null; fromCard = null; setPaused(false, true); });
+  hide(playerOv, () => { gen++; frame.removeAttribute("srcdoc"); current = null; fromCard = null; setPaused(false, true); });
 }
 $("#pClose").onclick = closePlayer;
 $("#pFav").onclick = () => current && toggleFav(current, $("#pFav"));
@@ -1095,9 +1174,9 @@ $("#pReload").onclick = async () => {
   if (!current) return;
   await flushGame();
   setPaused(false, true);
-  const id = current, save = await store.getSave(id).catch(() => ({}));
-  frame.classList.remove("ready"); $("#pSpin").classList.remove("hidden");
-  frame.srcdoc = inject(state.cache.get(id) || "", saveShim(save));
+  navTimes = [];
+  lastSave = await store.getSave(current).catch(() => lastSave);
+  if (current) loadGame(current);
 };
 $("#pFull").onclick = () => {
   const el = document.documentElement;
@@ -1272,6 +1351,7 @@ async function lockNow() {
 addEventListener("keydown", e => {
   if (e.key === "Escape") {
     if (confirmOv.classList.contains("open")) closeConfirm(false);
+    else if ($("#errOv").classList.contains("open")) hide($("#errOv"));
     else if (codeOv.classList.contains("open")) closeCode();
     else if (settingsOv.classList.contains("open")) closeSettings();
     else if (editorOv.classList.contains("open")) closeEditor();
