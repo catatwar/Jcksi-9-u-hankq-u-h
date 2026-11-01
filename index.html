@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#05060a">
@@ -15,12 +15,12 @@
 :root{
   --bg:#05060a; --panel:#0b0d14; --panel-2:#10131c; --line:rgba(255,255,255,.07); --line-2:rgba(255,255,255,.14);
   --ink:#e7e9f1; --muted:#868ca3; --faint:#555b70;
-  --blue:#3b82f6; --cyan:#22d3ee; --purple:#8b5cf6;
+  --blue:#3b82f6; --cyan:#22d3ee; --purple:#8b5cf6; --pink:#f472b6;
   --grad:linear-gradient(90deg,var(--cyan),var(--blue) 50%,var(--purple));
-  --ease:cubic-bezier(.22,.9,.24,1);
+  --ease:cubic-bezier(.16,1,.3,1);
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%}
+html,body{height:100%;overscroll-behavior:none;touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body{background:var(--bg);color:var(--ink);font:15px/1.5 Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden}
 button,input,textarea{font:inherit;color:inherit}
 button{cursor:pointer;background:none;border:0}
@@ -29,7 +29,7 @@ button{cursor:pointer;background:none;border:0}
 
 /* soft background glow */
 .glow{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
-.glow::before,.glow::after{content:"";position:absolute;width:70vmax;height:70vmax;border-radius:50%;filter:blur(110px);opacity:.16}
+.glow::before,.glow::after{content:"";position:absolute;width:70vmax;height:70vmax;border-radius:50%;filter:blur(110px);opacity:.16;will-change:transform}
 .glow::before{top:-40vmax;left:-20vmax;background:radial-gradient(circle,var(--cyan),var(--blue) 50%,transparent 70%);animation:drift 40s ease-in-out infinite alternate}
 .glow::after{bottom:-45vmax;right:-25vmax;background:radial-gradient(circle,var(--purple),var(--blue) 50%,transparent 70%);animation:drift 50s ease-in-out infinite alternate-reverse}
 @keyframes drift{to{transform:translate(8vw,6vh)}}
@@ -39,110 +39,183 @@ button{cursor:pointer;background:none;border:0}
 
 /* ---------- GATE ---------- */
 #gate{align-items:center;justify-content:center;padding:24px}
-.gate{width:min(380px,100%);text-align:center;animation:in .8s var(--ease) both}
-.gate.out{animation:out .5s var(--ease) both}
-@keyframes in{from{opacity:0;transform:translateY(10px)}}
-@keyframes out{to{opacity:0;transform:translateY(-8px)}}
+.gate{width:min(380px,100%);text-align:center;animation:rise .9s var(--ease) both}
+.gate.out{animation:leave .55s var(--ease) both}
+@keyframes rise{from{opacity:0;transform:translateY(14px);filter:blur(6px)}}
+@keyframes leave{to{opacity:0;transform:translateY(-12px) scale(.98);filter:blur(8px)}}
 .mark{font-size:28px;font-weight:600;letter-spacing:-.02em;margin-bottom:28px}
-.mark::after{content:"";display:block;width:28px;height:2px;margin:12px auto 0;border-radius:2px;background:var(--grad)}
-.field{position:relative;display:flex;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;transition:border-color .25s}
+.mark::after{content:"";display:block;width:28px;height:2px;margin:12px auto 0;border-radius:2px;background:var(--grad);background-size:200% 100%;animation:sheen 4s ease-in-out infinite}
+@keyframes sheen{50%{background-position:100% 0;width:40px}}
+.field{position:relative;display:flex;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;transition:border-color .3s}
 .field:focus-within{border-color:var(--line-2)}
-.field::after{content:"";position:absolute;left:12px;right:12px;bottom:-1px;height:1px;background:var(--grad);transform:scaleX(0);transition:transform .4s var(--ease)}
+.field::after{content:"";position:absolute;left:12px;right:12px;bottom:-1px;height:1px;background:var(--grad);transform:scaleX(0);transition:transform .6s var(--ease)}
 .field:focus-within::after{transform:scaleX(1)}
 .field input{flex:1;min-width:0;padding:14px 16px;background:none;border:0;outline:0;letter-spacing:.04em}
 .field input::placeholder{color:var(--faint);letter-spacing:0}
-.go{width:38px;height:38px;margin-right:5px;border-radius:9px;display:grid;place-items:center;color:var(--muted);transition:background .2s,color .2s}
-.go:hover:not(:disabled){background:rgba(255,255,255,.05);color:var(--ink)}
+.go{width:38px;height:38px;margin-right:5px;border-radius:9px;display:grid;place-items:center;color:var(--muted);transition:background .2s,color .2s,transform .3s var(--ease)}
+.go:hover:not(:disabled){background:rgba(255,255,255,.05);color:var(--ink);transform:translateX(2px)}
 .go:disabled{opacity:.4;cursor:default}
 .go svg{width:18px;height:18px}
 .spin{width:16px;height:16px;border-radius:50%;border:2px solid var(--line-2);border-top-color:var(--cyan);animation:rot .7s linear infinite}
 @keyframes rot{to{transform:rotate(360deg)}}
 .remember{display:inline-flex;align-items:center;gap:8px;margin-top:16px;font-size:13px;color:var(--muted);cursor:pointer;user-select:none}
-.remember input{appearance:none;width:15px;height:15px;border-radius:4px;border:1px solid var(--line-2);display:grid;place-items:center;transition:.2s}
+.remember input{appearance:none;width:15px;height:15px;border-radius:4px;border:1px solid var(--line-2);display:grid;place-items:center;transition:background .25s,border-color .25s}
 .remember input:checked{background:var(--blue);border-color:var(--blue)}
-.remember input:checked::after{content:"";width:4px;height:7px;border:solid #fff;border-width:0 1.5px 1.5px 0;transform:rotate(45deg) translate(-.5px,-1px)}
-.msg{height:20px;margin-top:14px;font-size:13px;color:var(--muted);transition:opacity .3s}
-.shake{animation:shake .4s ease}
-@keyframes shake{20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+.remember input:checked::after{content:"";width:4px;height:7px;border:solid #fff;border-width:0 1.5px 1.5px 0;transform:rotate(45deg) translate(-.5px,-1px);animation:pop .3s var(--ease)}
+.msg{height:20px;margin-top:14px;font-size:13px;color:var(--muted)}
+.msg:not(:empty){animation:rise .4s var(--ease)}
+.shake{animation:shake .45s var(--ease)}
+@keyframes shake{15%,55%{transform:translateX(-7px)}35%,75%{transform:translateX(7px)}}
 .preview{position:fixed;bottom:16px;left:0;right:0;text-align:center;font-size:12px;color:var(--faint)}
 .preview code{color:var(--muted)}
 
 /* ---------- APP ---------- */
-#app{flex-direction:column;overflow-y:auto;animation:in .6s var(--ease) both}
-.bar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:14px;padding:14px 24px;background:rgba(5,6,10,.8);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+#app{flex-direction:column;overflow-y:auto;overscroll-behavior:none;-webkit-overflow-scrolling:touch}
+#app.enter .bar{animation:barIn .8s var(--ease) both}
+#app.enter .tabs-row{animation:rise .8s .08s var(--ease) both}
+@keyframes barIn{from{opacity:0;transform:translateY(-100%)}}
+.bar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:14px;padding:14px 24px;background:rgba(5,6,10,.78);backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%);border-bottom:1px solid var(--line)}
 .logo{font-weight:600;letter-spacing:-.01em;flex:none}
-.search{flex:1;max-width:460px;margin:0 auto;display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;transition:border-color .25s}
-.search:focus-within{border-color:var(--line-2)}
-.search svg{width:16px;height:16px;color:var(--faint);flex:none}
+.search{flex:1;max-width:460px;margin:0 auto;display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;transition:border-color .3s,max-width .5s var(--ease),box-shadow .4s}
+.search:focus-within{border-color:var(--line-2);max-width:520px;box-shadow:0 0 0 4px rgba(34,211,238,.06)}
+.search svg{width:16px;height:16px;color:var(--faint);flex:none;transition:color .3s}
+.search:focus-within svg{color:var(--cyan)}
 .search input{flex:1;min-width:0;padding:9px 0;background:none;border:0;outline:0;font-size:14px}
 .search input::placeholder{color:var(--faint)}
 .icons{display:flex;gap:4px;flex:none}
-.ib{width:36px;height:36px;border-radius:9px;display:grid;place-items:center;color:var(--muted);transition:background .2s,color .2s}
+.ib{width:36px;height:36px;border-radius:9px;display:grid;place-items:center;color:var(--muted);transition:background .2s,color .2s,transform .3s var(--ease)}
 .ib:hover{background:rgba(255,255,255,.05);color:var(--ink)}
+.ib:active{transform:scale(.92)}
 .ib svg{width:18px;height:18px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;padding:24px}
-.card{position:relative;display:flex;gap:14px;align-items:flex-start;padding:16px;border-radius:12px;background:var(--panel);border:1px solid var(--line);cursor:pointer;text-align:left;transition:border-color .25s,background .25s,transform .25s var(--ease);animation:in .5s var(--ease) both;animation-delay:calc(min(var(--i),12) * 30ms)}
-.card:hover{border-color:var(--line-2);background:var(--panel-2);transform:translateY(-2px)}
+
+.tabs-row{display:flex;align-items:center;gap:12px;padding:20px 24px 0}
+.tabs{position:relative;display:inline-flex;padding:3px;border-radius:10px;background:var(--panel);border:1px solid var(--line)}
+.tabs button{position:relative;z-index:1;padding:6px 14px;border-radius:7px;font-size:13px;font-weight:500;color:var(--muted);transition:color .3s}
+.tabs button.on{color:var(--ink)}
+.tabs button .n{margin-left:6px;font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
+.tabs .ind{position:absolute;top:3px;bottom:3px;left:0;border-radius:7px;background:var(--panel-2);box-shadow:inset 0 0 0 1px var(--line-2);transition:transform .5s var(--ease),width .5s var(--ease)}
+.tabs .ind::after{content:"";position:absolute;left:30%;right:30%;bottom:-1px;height:1.5px;border-radius:2px;background:var(--grad)}
+
+.grid{position:relative;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;padding:18px 24px 40px}
+.card{position:relative;display:flex;flex-direction:column;border-radius:12px;overflow:hidden;background:var(--panel);border:1px solid var(--line);cursor:pointer;text-align:left;transition:border-color .3s,background .3s,box-shadow .5s var(--ease),translate .5s var(--ease);will-change:transform}
+.card:hover{border-color:var(--line-2);background:var(--panel-2);translate:0 -3px;box-shadow:0 18px 40px -20px rgba(59,130,246,.45)}
+.card:active{translate:0 -1px}
 .card:focus-visible{outline:1px solid var(--cyan);outline-offset:2px}
-.tile{width:40px;height:40px;flex:none;border-radius:10px;display:grid;place-items:center;font-weight:600;color:#fff;background:linear-gradient(135deg,var(--c1),var(--c2))}
-.info{min-width:0;flex:1}
-.info h3{font-size:14.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:22px}
+.thumb{position:relative;aspect-ratio:16/9;overflow:hidden;display:grid;place-items:center;font-size:30px;font-weight:600;color:rgba(255,255,255,.9);background:linear-gradient(135deg,var(--c1),var(--c2))}
+.thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transform:scale(1.03);transition:opacity .5s var(--ease),transform .7s var(--ease)}
+.thumb img.loaded{opacity:1;transform:none}
+.card:hover .thumb img.loaded{transform:scale(1.045)}
+.info{padding:12px 14px 14px}
+.info h3{font-size:14.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .info p{margin-top:2px;font-size:13px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.edit{position:absolute;top:10px;right:10px;width:26px;height:26px;border-radius:7px;display:grid;place-items:center;color:var(--faint);opacity:0;transition:opacity .2s,background .2s,color .2s}
-.card:hover .edit,.edit:focus-visible{opacity:1}
-.edit:hover{background:rgba(255,255,255,.06);color:var(--ink)}
-.edit svg{width:14px;height:14px}
-@media (hover:none){.edit{opacity:1}}
-.empty{grid-column:1/-1;padding:90px 20px;text-align:center;color:var(--muted);font-size:14px}
+.info .when{margin-top:6px;font-size:11.5px;color:var(--faint)}
+.chip{position:absolute;top:8px;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;color:#fff;background:rgba(5,6,10,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);opacity:0;transform:translateY(-4px);transition:opacity .3s var(--ease),transform .4s var(--ease),background .2s,color .2s}
+.chip svg{width:15px;height:15px}
+.chip:hover{background:rgba(5,6,10,.85)}
+.chip.edit{right:8px}
+.chip.fav{right:44px}
+.card:hover .chip,.chip:focus-visible,.chip.fav.on{opacity:1;transform:none}
+.chip.fav.on{color:var(--pink)}
+.chip.fav.on svg{fill:currentColor}
+@media (hover:none){.chip{opacity:1;transform:none}}
+.skel{border-radius:12px;overflow:hidden;background:var(--panel);border:1px solid var(--line)}
+.skel .a{aspect-ratio:16/9}
+.skel .b{height:12px;margin:14px;width:55%;border-radius:4px}
+.skel .a,.skel .b{background:linear-gradient(90deg,var(--panel-2) 30%,#171b27 50%,var(--panel-2) 70%);background-size:300% 100%;animation:shim 1.4s ease-in-out infinite}
+@keyframes shim{from{background-position:100% 0}to{background-position:0 0}}
+.empty{padding:90px 20px;text-align:center;color:var(--muted);font-size:14px;animation:rise .6s var(--ease) both}
 .empty button{margin-top:14px}
 
 /* ---------- OVERLAYS ---------- */
-.overlay{position:fixed;inset:0;z-index:20;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(3,4,7,.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
-.overlay.open{display:flex;animation:fade .25s ease both}
-.overlay.closing{animation:fade .2s ease reverse both}
+.overlay{position:fixed;inset:0;z-index:20;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(3,4,7,.72);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.overlay.open{display:flex;animation:fade .35s var(--ease) both}
+.overlay.closing{animation:fade .25s var(--ease) reverse both}
 @keyframes fade{from{opacity:0}}
-.overlay.open>*{animation:pop .35s var(--ease) both}
-@keyframes pop{from{opacity:0;transform:scale(.97)}}
-.player{width:100%;height:100%;max-width:1400px;display:flex;flex-direction:column;border-radius:14px;overflow:hidden;background:#000;border:1px solid var(--line)}
-.pbar{display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--panel);border-bottom:1px solid var(--line)}
+.overlay.open>.modal{animation:modalIn .5s var(--ease) both}
+.overlay.closing>.modal{animation:modalIn .25s var(--ease) reverse both}
+@keyframes modalIn{from{opacity:0;transform:translateY(10px) scale(.97);filter:blur(4px)}}
+.player{width:100%;height:100%;max-width:1400px;display:flex;flex-direction:column;border-radius:14px;overflow:hidden;background:#000;border:1px solid var(--line);box-shadow:0 40px 100px -30px rgba(0,0,0,.9)}
+.pbar{display:flex;align-items:center;gap:6px;padding:6px 8px;background:var(--panel);border-bottom:1px solid var(--line)}
 .pbar .t{flex:1;min-width:0;font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.saved{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--cyan);opacity:0;transform:translateY(3px);transition:opacity .4s var(--ease),transform .4s var(--ease);margin-right:4px}
+.saved.on{opacity:1;transform:none}
+.saved svg{width:14px;height:14px}
+#pFav.on{color:var(--pink)}
+#pFav.on svg{fill:currentColor}
 .stage{position:relative;flex:1}
-.stage iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff;opacity:0;transition:opacity .35s}
+.stage iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff;opacity:0;transition:opacity .5s var(--ease)}
 .stage iframe.ready{opacity:1}
 .stage .spin{position:absolute;top:50%;left:50%;margin:-8px}
-.modal{width:min(460px,100%);padding:24px;border-radius:14px;background:var(--panel);border:1px solid var(--line)}
+.modal{width:min(460px,100%);max-height:100%;overflow:auto;padding:24px;border-radius:14px;background:var(--panel);border:1px solid var(--line);box-shadow:0 30px 80px -30px rgba(0,0,0,.9)}
 .modal h3{font-size:17px;font-weight:600;margin-bottom:18px}
-.drop{display:block;padding:22px;margin-bottom:14px;border-radius:10px;border:1px dashed var(--line-2);text-align:center;font-size:13px;color:var(--muted);cursor:pointer;transition:border-color .2s,color .2s,background .2s}
-.drop:hover,.drop.over{border-color:var(--cyan);color:var(--ink)}
+.drop{display:block;padding:22px;margin-bottom:14px;border-radius:10px;border:1px dashed var(--line-2);text-align:center;font-size:13px;color:var(--muted);cursor:pointer;transition:border-color .3s,color .3s,background .3s}
+.drop:hover,.drop.over{border-color:var(--cyan);color:var(--ink);background:rgba(34,211,238,.03)}
 .drop.has{border-style:solid;border-color:var(--blue);color:var(--ink)}
 .drop input{display:none}
 .lbl{display:block;margin:0 0 6px;font-size:12px;color:var(--muted)}
-.inp{width:100%;padding:10px 12px;margin-bottom:14px;border-radius:9px;background:var(--bg);border:1px solid var(--line);outline:0;font-size:14px;transition:border-color .2s}
+.inp{width:100%;padding:10px 12px;margin-bottom:14px;border-radius:9px;background:var(--bg);border:1px solid var(--line);outline:0;font-size:14px;transition:border-color .3s}
 .inp:focus{border-color:var(--line-2)}
 textarea.inp{resize:vertical;min-height:64px}
 .row{display:flex;gap:8px;align-items:center;margin-top:6px}
 .row .sp{flex:1}
-.btn{padding:9px 16px;border-radius:9px;font-size:14px;font-weight:500;transition:background .2s,opacity .2s,border-color .2s}
+.btn{padding:9px 16px;border-radius:9px;font-size:14px;font-weight:500;transition:background .2s,opacity .2s,border-color .2s,transform .3s var(--ease)}
+.btn:active{transform:scale(.96)}
 .btn.pri{background:var(--ink);color:var(--bg)}
 .btn.pri:hover{opacity:.88}
 .btn.sec{border:1px solid var(--line);color:var(--muted)}
 .btn.sec:hover{border-color:var(--line-2);color:var(--ink)}
 .btn.del{color:#f87171;padding-left:4px;padding-right:4px}
 .btn:disabled{opacity:.45;cursor:default}
-.toast{position:fixed;left:50%;bottom:22px;z-index:40;transform:translateX(-50%);padding:9px 14px;border-radius:9px;font-size:13px;background:var(--panel-2);border:1px solid var(--line);animation:in .3s var(--ease) both}
+.imgpick{display:flex;gap:12px;align-items:center;margin-bottom:14px}
+.imgprev{width:112px;aspect-ratio:16/9;flex:none;border-radius:8px;border:1px dashed var(--line-2);display:grid;place-items:center;overflow:hidden;font-size:12px;color:var(--faint);cursor:pointer;transition:border-color .3s}
+.imgprev:hover,.imgprev.over{border-color:var(--cyan)}
+.imgprev img{width:100%;height:100%;object-fit:cover;animation:fade .4s var(--ease)}
+.imgpick .btns{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.linkbtn{font-size:13px;color:var(--muted);transition:color .2s}
+.linkbtn:hover{color:var(--ink)}
+.linkbtn.warn:hover{color:#f87171}
+.confirm-box .note{font-size:13px;color:var(--muted);margin:-8px 0 14px}
+.confirm-box .err{height:18px;font-size:13px;color:#f87171;margin:-6px 0 6px}
+.toasts{position:fixed;left:50%;bottom:22px;z-index:40;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none}
+.toast{padding:9px 14px;border-radius:9px;font-size:13px;background:var(--panel-2);border:1px solid var(--line);box-shadow:0 12px 30px -12px rgba(0,0,0,.8);animation:toastIn .45s var(--ease) both}
+.toast.out{animation:toastIn .3s var(--ease) reverse both}
+@keyframes toastIn{from{opacity:0;transform:translateY(12px) scale(.96)}}
+@keyframes pop{from{transform:scale(.4)}}
 
 @media (max-width:640px){
   .bar{flex-wrap:wrap;padding:12px 16px}
-  .search{order:3;flex-basis:100%;max-width:none}
+  .search{order:3;flex-basis:100%;max-width:none!important}
   .icons{margin-left:auto}
-  .grid{padding:16px;grid-template-columns:1fr}
+  .tabs-row{padding:16px 16px 0}
+  .grid{padding:14px 16px 32px;grid-template-columns:repeat(2,1fr);gap:10px}
+  .info{padding:10px 10px 12px}
+  .info p{display:none}
   .overlay{padding:0}
   .player{border-radius:0;border:0}
+  .modal{border-radius:14px 14px 0 0;align-self:flex-end}
+  .field input,.search input,.inp{font-size:16px}
 }
+/* ---------- PANIC ---------- */
+.panic{position:fixed;top:max(14px,env(safe-area-inset-top));right:max(16px,env(safe-area-inset-right));z-index:100;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;color:#fca5a5;background:rgba(11,13,20,.85);border:1px solid rgba(248,113,113,.35);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 0 0 0 rgba(248,113,113,.0);transition:border-color .3s,box-shadow .4s var(--ease),transform .3s var(--ease),color .3s;user-select:none;-webkit-user-select:none}
+.panic:hover{border-color:rgba(248,113,113,.7);color:#fecaca;box-shadow:0 0 0 4px rgba(248,113,113,.08)}
+.panic:active{transform:scale(.9)}
+.panic svg{width:16px;height:16px}
+.panic .dots{position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);display:flex;gap:3px}
+.panic .dots i{width:4px;height:4px;border-radius:50%;background:rgba(248,113,113,.25);transition:background .2s,transform .3s var(--ease)}
+.panic .dots i.on{background:#f87171;transform:scale(1.3)}
+.bar{padding-right:68px!important}
+@media (max-width:640px){.bar{padding-right:16px!important}.icons{margin-right:50px}}
+.pbar{padding-right:56px!important}
+body.fs .overlay{padding:0}
+body.fs .player{border-radius:0;border:0;max-width:none}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
+<button class="panic" id="panic" type="button" aria-label="Panic: triple-click to leave" title="Triple-click to leave">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v8"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></svg>
+  <span class="dots"><i></i><i></i><i></i></span>
+</button>
 <div class="glow" aria-hidden="true"></div>
 
 <!-- GATE -->
@@ -175,15 +248,26 @@ textarea.inp{resize:vertical;min-height:64px}
       <button class="ib" id="lockBtn" aria-label="Lock" title="Lock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></button>
     </div>
   </header>
+  <div class="tabs-row">
+    <nav class="tabs" id="tabs" aria-label="Library">
+      <span class="ind" id="ind"></span>
+      <button data-v="all" class="on">All<span class="n" id="nAll"></span></button>
+      <button data-v="fav">Favorites<span class="n" id="nFav"></span></button>
+      <button data-v="recent">Recent</button>
+    </nav>
+  </div>
   <main class="grid" id="grid"></main>
+  <div class="empty hidden" id="empty"></div>
 </section>
 
 <!-- PLAYER -->
 <div class="overlay" id="playerOv" role="dialog" aria-modal="true" aria-label="Player">
-  <div class="player">
+  <div class="player" id="playerBox">
     <div class="pbar">
       <button class="ib" id="pClose" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
       <div class="t" id="pTitle"></div>
+      <span class="saved" id="pSaved"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18a5 5 0 1 1 .9-9.9A6 6 0 0 1 19 10a4 4 0 0 1-1 7.9"/><path d="m9 15 2 2 4-4"/></svg>Saved</span>
+      <button class="ib" id="pFav" aria-label="Favorite"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg></button>
       <button class="ib" id="pReload" aria-label="Restart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></button>
       <button class="ib" id="pFull" aria-label="Fullscreen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
     </div>
@@ -203,8 +287,17 @@ textarea.inp{resize:vertical;min-height:64px}
     <input class="inp" id="edName" maxlength="60" required>
     <label class="lbl" for="edDesc">Description</label>
     <textarea class="inp" id="edDesc" maxlength="200"></textarea>
+    <span class="lbl">Thumbnail</span>
+    <div class="imgpick">
+      <label class="imgprev" id="imgPrev"><input type="file" id="edImg" accept="image/*" class="hidden"><span>Add image</span></label>
+      <div class="btns">
+        <button type="button" class="linkbtn" id="imgChoose">Choose image</button>
+        <button type="button" class="linkbtn hidden" id="imgRemove">Remove</button>
+      </div>
+    </div>
     <div class="row">
       <button type="button" class="btn del hidden" id="edDelete">Delete</button>
+      <button type="button" class="linkbtn warn hidden" id="edReset">Reset save</button>
       <div class="sp"></div>
       <button type="button" class="btn sec" id="edCancel">Cancel</button>
       <button type="submit" class="btn pri" id="edSave">Save</button>
@@ -212,12 +305,27 @@ textarea.inp{resize:vertical;min-height:64px}
   </form>
 </div>
 
+<!-- DELETE PASSWORD -->
+<div class="overlay" id="confirmOv" role="dialog" aria-modal="true" aria-label="Delete password">
+  <form class="modal confirm-box" id="cfForm" autocomplete="off">
+    <h3 id="cfTitle">Delete</h3>
+    <p class="note" id="cfNote">Enter the delete password.</p>
+    <input class="inp" id="cfPw" type="password" placeholder="Delete password" aria-label="Delete password" spellcheck="false" autocapitalize="off" autocomplete="off">
+    <p class="err" id="cfErr"></p>
+    <div class="row">
+      <div class="sp"></div>
+      <button type="button" class="btn sec" id="cfCancel">Cancel</button>
+      <button type="submit" class="btn pri" id="cfGo">Confirm</button>
+    </div>
+  </form>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
 <script type="module">
 /* ============================================================
-   Paste your Firebase web config here (Project settings → Your apps).
-   These values are meant to be public; the database rules are what
-   protect your data. While apiKey says PASTE…, the page runs in
-   preview mode.
+   Firebase web config (public by design; the database rules
+   are what protect your data).
    ============================================================ */
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyBx1ruxtF8phZNscA9MmK9NZCOac_rwgmo",
@@ -230,19 +338,32 @@ const FIREBASE_CONFIG = {
 };
 /* ============================================================ */
 
+const PANIC_URL = "https://canvas.instructure.com/";
 const FB = "https://www.gstatic.com/firebasejs/10.12.2/";
 const DEMO = !FIREBASE_CONFIG.apiKey || FIREBASE_CONFIG.apiKey.startsWith("PASTE");
 const WEEK = 7 * 864e5;
 const SCHEDULE = [60e3, 5*60e3, 15*60e3, 60*60e3, 6*3600e3, 24*3600e3, 3*864e5, 7*864e5];
 const TILES = [["#22d3ee","#3b82f6"],["#3b82f6","#8b5cf6"],["#8b5cf6","#22d3ee"],["#06b6d4","#6366f1"]];
 const MAX_BYTES = 9.5 * 1024 * 1024;
+const MAX_SAVE = 1.9e6;
+const RECENT_MAX = 10;
+const EASE = "cubic-bezier(.16,1,.3,1)";
+const REDUCE = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const $ = s => document.querySelector(s);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
 const safe = (fn, fb) => { try { return fn(); } catch { return fb; } };
 const ls = { get: (k, fb) => safe(() => JSON.parse(localStorage.getItem(k)) ?? fb, fb), set: (k, v) => safe(() => localStorage.setItem(k, JSON.stringify(v))), del: k => safe(() => localStorage.removeItem(k)) };
 const ss = { get: k => safe(() => sessionStorage.getItem(k), null), set: (k, v) => safe(() => sessionStorage.setItem(k, v)), del: k => safe(() => sessionStorage.removeItem(k)) };
+const isPerm = e => /permission/i.test(String(e?.code || e?.message || e));
+const anim = (el, frames, opts) => REDUCE || !el.animate ? null : el.animate(frames, { easing: EASE, ...opts });
+const ago = t => { const s = (Date.now() - t) / 1000; if (s < 60) return "just now"; const m = s / 60; if (m < 60) return `${Math.floor(m)} min ago`; const h = m / 60; if (h < 24) return `${Math.floor(h)} hr ago`; const d = Math.floor(h / 24); return d === 1 ? "yesterday" : `${d} days ago`; };
+
+/* No zooming (pinch, ctrl+wheel, ctrl +/-) */
+["gesturestart", "gesturechange", "gestureend"].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), { passive: false }));
+document.addEventListener("touchmove", e => { if (e.touches.length > 1 || (e.scale && e.scale !== 1)) e.preventDefault(); }, { passive: false });
+addEventListener("wheel", e => { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+addEventListener("keydown", e => { if ((e.ctrlKey || e.metaKey) && ["+", "=", "-", "_", "0"].includes(e.key)) e.preventDefault(); });
 
 /* Deterrents only. The password is not in this file. */
 addEventListener("contextmenu", e => e.preventDefault());
@@ -270,44 +391,73 @@ async function realStore(cfg) {
   const uid = user.uid;
   const conf = (await d.get(d.ref(db, "config"))).val();
   if (!conf || !conf.salt) throw new Error("NOSETUP");
+  const iter = conf.iter || 310000;
   let key = null;
+  const r = p => d.ref(db, `vault/${key}/${p}`);
   return {
     now: () => Date.now() + offset,
-    derive: pw => pbkdf2(pw, conf.salt, conf.iter || 310000),
+    derive: pw => pbkdf2(pw, conf.salt, iter),
     getLock: async () => (await d.get(d.ref(db, `locks/${uid}`))).val(),
     putLock: rec => d.set(d.ref(db, `locks/${uid}`), rec),
     async tryKey(k) {
       try { const s = await d.get(d.ref(db, `vault/${k}/meta`)); if (s.exists()) { key = k; return true; } return false; }
-      catch (e) { if (/permission/i.test(String(e?.code || e?.message || e))) return "locked"; throw e; }
+      catch (e) { if (isPerm(e)) return "locked"; throw e; }
     },
-    watchApps: cb => d.onValue(d.ref(db, `vault/${key}/apps`), s => cb(s.val() || {})),
-    getFile: async id => (await d.get(d.ref(db, `vault/${key}/files/${id}`))).val(),
-    newId: () => d.push(d.ref(db, `vault/${key}/apps`)).key,
-    async saveApp(id, meta, html) {
+    watch: (name, cb) => d.onValue(r(name), s => cb(s.val() || {})),
+    getFile: async id => (await d.get(r(`files/${id}`))).val(),
+    newId: () => d.push(r("apps")).key,
+    async saveApp(id, meta, html, thumb) {
       const u = {};
       for (const [k, v] of Object.entries(meta)) u[`apps/${id}/${k}`] = v;
       if (html != null) u[`files/${id}`] = html;
+      if (thumb !== undefined) u[`thumbs/${id}`] = thumb;
       await d.update(d.ref(db, `vault/${key}`), u);
     },
-    deleteApp: id => d.update(d.ref(db, `vault/${key}`), { [`apps/${id}`]: null, [`files/${id}`]: null }),
+    deleteApp: id => d.update(d.ref(db, `vault/${key}`), { [`apps/${id}`]: null, [`files/${id}`]: null, [`thumbs/${id}`]: null, [`favs/${id}`]: null, [`recent/${id}`]: null, [`saves/${id}`]: null }),
+    setFav: (id, on) => d.set(r(`favs/${id}`), on ? true : null),
+    markPlayed: id => d.set(r(`recent/${id}`), d.serverTimestamp()),
+    dropRecent: ids => d.update(d.ref(db, `vault/${key}`), Object.fromEntries(ids.map(id => [`recent/${id}`, null]))),
+    getSave: async id => { const v = (await d.get(r(`saves/${id}`))).val(); return safe(() => JSON.parse(v), null) || {}; },
+    putSave: (id, str) => d.set(r(`saves/${id}`), str),
+    clearSave: id => d.set(r(`saves/${id}`), null),
+    // Delete password: the database only accepts this write if the hash matches,
+    // and then allows deletes/replacements for 10 minutes.
+    async elevate(pw) {
+      const k = await pbkdf2(pw, conf.salt + ":delete", iter);
+      try { await d.set(d.ref(db, `admins/${uid}`), { k, t: d.serverTimestamp() }); return true; }
+      catch (e) { if (isPerm(e)) return false; throw e; }
+    },
   };
 }
 
 function demoStore() {
-  let lock = null, cb = null, n = 0;
-  const apps = {}, files = {};
-  const emit = () => cb && cb(structuredClone(apps));
+  let lock = null, n = 0;
+  const data = { apps: {}, thumbs: {}, favs: {}, recent: {}, saves: {} }, files = {}, subs = {};
+  const emit = name => subs[name] && subs[name]({ ...data[name] });
+  const emitAll = () => Object.keys(data).forEach(emit);
   return {
     now: () => Date.now(),
     derive: async pw => (await sleep(400), pw === "nebula-demo" ? "demo" : "x"),
     getLock: async () => lock && { ...lock },
     putLock: async r => { lock = { ...r }; },
     tryKey: async k => (lock && lock.until > Date.now()) ? "locked" : k === "demo",
-    watchApps: f => { cb = f; emit(); },
-    getFile: async id => files[id],
+    watch: (name, cb) => { subs[name] = cb; emit(name); },
+    getFile: async id => (await sleep(150), files[id]),
     newId: () => "a" + (++n) + Date.now(),
-    saveApp: async (id, meta, html) => { apps[id] = { ...(apps[id] || {}), ...meta }; if (html != null) files[id] = html; emit(); },
-    deleteApp: async id => { delete apps[id]; delete files[id]; emit(); },
+    saveApp: async (id, meta, html, thumb) => {
+      data.apps[id] = { ...(data.apps[id] || {}), ...meta };
+      if (html != null) files[id] = html;
+      if (thumb === null) delete data.thumbs[id]; else if (thumb !== undefined) data.thumbs[id] = thumb;
+      emitAll();
+    },
+    deleteApp: async id => { for (const k in data) delete data[k][id]; delete files[id]; emitAll(); },
+    setFav: async (id, on) => { if (on) data.favs[id] = true; else delete data.favs[id]; emit("favs"); },
+    markPlayed: async id => { data.recent[id] = Date.now(); emit("recent"); },
+    dropRecent: async ids => { ids.forEach(id => delete data.recent[id]); emit("recent"); },
+    getSave: async id => safe(() => JSON.parse(data.saves[id]), null) || {},
+    putSave: async (id, s) => { data.saves[id] = s; },
+    clearSave: async id => { delete data.saves[id]; },
+    elevate: async pw => (await sleep(400), pw === "delete-demo"),
   };
 }
 
@@ -321,16 +471,13 @@ const isQuiet = (r, now) => !r || (now - (r.lastFail || 0) > WEEK && now - (r.un
 const isLocked = () => !!(lockRec && lockRec.until > store.now());
 
 function setBusy(b) { busy = b; go.disabled = b; go.innerHTML = b ? `<div class="spin"></div>` : ARROW; }
-function deny() {
-  msg.textContent = "Access denied.";
-  gateBox.classList.remove("shake"); void gateBox.offsetWidth; gateBox.classList.add("shake");
-  pw.select();
-}
+function shake(el) { el.classList.remove("shake"); void el.offsetWidth; el.classList.add("shake"); }
+function deny() { msg.textContent = ""; requestAnimationFrame(() => msg.textContent = "Access denied."); shake(gateBox); pw.select(); }
 
 async function recordFail() {
-  const now = store.now();
+  const now = store.now(), blank = { fails: 0, strikes: 0, until: 0, lastFail: 0 };
   let r = await store.getLock();
-  r = isQuiet(r, now) ? { fails: 0, strikes: 0, until: 0, lastFail: 0 } : { fails: 0, strikes: 0, until: 0, lastFail: 0, ...r };
+  r = isQuiet(r, now) ? blank : { ...blank, ...r };
   r.fails += 1; r.lastFail = now;
   if (r.fails >= 3) { r.strikes += 1; r.fails = 0; r.until = now + lockDuration(r.strikes); }
   await store.putLock(r);
@@ -371,9 +518,9 @@ function enter() {
   gateBox.classList.add("out");
   setTimeout(() => {
     $("#gate").classList.remove("active");
-    $("#app").classList.add("active");
+    const app = $("#app"); app.classList.add("active", "enter");
     startApp();
-  }, 450);
+  }, 480);
 }
 
 async function boot() {
@@ -392,86 +539,284 @@ async function boot() {
   pw.focus();
 }
 
-/* ---------------- app ---------------- */
-const state = { apps: {}, q: "", cache: new Map(), animate: true };
-const grid = $("#grid");
+/* ---------------- library ---------------- */
+const state = { apps: {}, thumbs: {}, favs: {}, recent: {}, q: "", view: "all", loaded: false, cache: new Map() };
+const grid = $("#grid"), emptyEl = $("#empty"), cards = new Map();
+const isImg = s => typeof s === "string" && /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(s);
+const HEART = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>`;
+const DOTS = `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>`;
 
-function startApp() { store.watchApps(a => { state.apps = a; render(); }); }
-
-function matches(a, toks) {
-  const hay = `${a.name || ""} ${a.desc || ""}`.toLowerCase();
-  return toks.every(t => hay.includes(t));
+function startApp() {
+  grid.innerHTML = Array.from({ length: 6 }, () => `<div class="skel"><div class="a"></div><div class="b"></div></div>`).join("");
+  moveInd(false);
+  let first = true;
+  const sub = name => store.watch(name, v => {
+    state[name] = v;
+    if (name === "apps" && first) { first = false; state.loaded = true; grid.innerHTML = ""; }
+    if (name === "recent") trimRecent();
+    if (state.loaded) render();
+  });
+  ["thumbs", "favs", "recent", "apps"].forEach(sub);
 }
-function render() {
+
+function trimRecent() {
+  const ids = Object.entries(state.recent).sort((a, b) => b[1] - a[1]).map(([id]) => id);
+  if (ids.length > RECENT_MAX) store.dropRecent(ids.slice(RECENT_MAX)).catch(() => {});
+}
+
+function listFor(view) {
   const toks = state.q.toLowerCase().split(/\s+/).filter(Boolean);
-  const all = Object.entries(state.apps).map(([id, a]) => ({ id, ...a }));
-  const list = all.filter(a => matches(a, toks)).sort((a, b) => (b.added || 0) - (a.added || 0));
-  if (!all.length) {
-    grid.innerHTML = `<div class="empty">Nothing here yet.<br><button class="btn sec" data-add>Add an HTML file</button></div>`;
-    return;
-  }
-  if (!list.length) { grid.innerHTML = `<div class="empty">No results.</div>`; return; }
-  const anim = state.animate; state.animate = false;
-  grid.innerHTML = list.map((a, i) => {
-    const [c1, c2] = TILES[[...a.id].reduce((s, c) => s + c.charCodeAt(0), 0) % TILES.length];
-    return `<div class="card" role="button" tabindex="0" data-id="${esc(a.id)}" style="--i:${anim ? i : 0};--c1:${c1};--c2:${c2};${anim ? "" : "animation:none"}">
-      <div class="tile">${esc((a.name || "?").trim()[0]?.toUpperCase() || "?")}</div>
-      <div class="info"><h3>${esc(a.name || "Untitled")}</h3>${a.desc ? `<p>${esc(a.desc)}</p>` : ""}</div>
-      <button class="edit" data-edit aria-label="Edit"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
-    </div>`;
-  }).join("");
+  let list = Object.entries(state.apps).map(([id, a]) => ({ id, ...a }));
+  if (view === "fav") list = list.filter(a => state.favs[a.id]);
+  if (view === "recent") list = list.filter(a => state.recent[a.id]).sort((a, b) => state.recent[b.id] - state.recent[a.id]).slice(0, RECENT_MAX);
+  else list.sort((a, b) => (b.added || 0) - (a.added || 0));
+  if (toks.length) list = list.filter(a => toks.every(t => `${a.name || ""} ${a.desc || ""}`.toLowerCase().includes(t)));
+  return list;
 }
+
+function makeCard(id) {
+  const el = document.createElement("div");
+  el.className = "card"; el.tabIndex = 0; el.setAttribute("role", "button"); el.dataset.id = id;
+  const [c1, c2] = TILES[[...id].reduce((s, c) => s + c.charCodeAt(0), 0) % TILES.length];
+  el.style.setProperty("--c1", c1); el.style.setProperty("--c2", c2);
+  el.innerHTML = `<div class="thumb"><span class="letter"></span></div>
+    <button class="chip fav" data-fav aria-label="Favorite">${HEART}</button>
+    <button class="chip edit" data-edit aria-label="Edit">${DOTS}</button>
+    <div class="info"><h3></h3><p></p><div class="when hidden"></div></div>`;
+  return el;
+}
+function updateCard(el, a) {
+  const name = a.name || "Untitled";
+  el.setAttribute("aria-label", name);
+  el.querySelector("h3").textContent = name;
+  const p = el.querySelector("p"); p.textContent = a.desc || ""; p.classList.toggle("hidden", !a.desc);
+  el.querySelector(".letter").textContent = name.trim()[0]?.toUpperCase() || "?";
+  const src = isImg(state.thumbs[a.id]) ? state.thumbs[a.id] : null, thumb = el.querySelector(".thumb");
+  let img = thumb.querySelector("img");
+  if (src && (!img || img.dataset.src !== String(src.length) + src.slice(-24))) {
+    if (img) img.remove();
+    img = new Image(); img.alt = ""; img.draggable = false; img.decoding = "async";
+    img.dataset.src = String(src.length) + src.slice(-24);
+    img.onload = () => img.classList.add("loaded");
+    img.src = src; thumb.appendChild(img);
+  } else if (!src && img) img.remove();
+  el.querySelector("[data-fav]").classList.toggle("on", !!state.favs[a.id]);
+  const when = el.querySelector(".when");
+  if (state.view === "recent" && state.recent[a.id]) { when.textContent = `Played ${ago(state.recent[a.id])}`; when.classList.remove("hidden"); }
+  else when.classList.add("hidden");
+}
+
+function render() {
+  const list = listFor(state.view);
+  $("#nAll").textContent = Object.keys(state.apps).length || "";
+  $("#nFav").textContent = Object.keys(state.favs).filter(id => state.apps[id]).length || "";
+  // FLIP: remember where cards were
+  const before = new Map();
+  for (const [id, el] of cards) if (el.isConnected) before.set(id, el.getBoundingClientRect());
+  const keep = new Set(list.map(a => a.id));
+  for (const [id, el] of cards) if (!keep.has(id)) { el.remove(); cards.delete(id); }
+  const fresh = [];
+  list.forEach(a => {
+    let el = cards.get(a.id);
+    if (!el) { el = makeCard(a.id); cards.set(a.id, el); fresh.push(el); }
+    updateCard(el, a);
+    grid.appendChild(el);
+  });
+  // empty state
+  const total = Object.keys(state.apps).length;
+  let emptyText = "";
+  if (!list.length) {
+    if (state.q) emptyText = "No results.";
+    else if (!total) emptyText = `Nothing here yet.<br><button class="btn sec" data-add>Add an HTML file</button>`;
+    else if (state.view === "fav") emptyText = "No favorites yet. Tap the heart on any card.";
+    else if (state.view === "recent") emptyText = "Nothing played yet.";
+  }
+  if (emptyEl.dataset.t !== emptyText) { emptyEl.dataset.t = emptyText; emptyEl.innerHTML = emptyText; }
+  emptyEl.classList.toggle("hidden", !emptyText);
+  // FLIP: animate moves and entrances
+  let i = 0;
+  for (const el of grid.children) {
+    const id = el.dataset.id, r0 = before.get(id);
+    if (r0) {
+      const r1 = el.getBoundingClientRect(), dx = r0.left - r1.left, dy = r0.top - r1.top;
+      if (Math.abs(dx) > .5 || Math.abs(dy) > .5) anim(el, [{ transform: `translate(${dx}px,${dy}px)` }, { transform: "none" }], { duration: 550 });
+    } else if (fresh.includes(el) || !before.size) {
+      anim(el, [{ opacity: 0, transform: "translateY(14px) scale(.97)" }, { opacity: 1, transform: "none" }], { duration: 600, delay: Math.min(i, 14) * 35, fill: "backwards" });
+    }
+    i++;
+  }
+}
+
+function setView(v) {
+  if (v === state.view) return;
+  state.view = v;
+  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.v === v));
+  moveInd(true);
+  // switch views with a soft crossfade
+  for (const el of cards.values()) el.remove();
+  cards.clear();
+  render();
+}
+function moveInd(animate) {
+  const on = $("#tabs button.on"), ind = $("#ind");
+  if (!on) return;
+  if (!animate) ind.style.transition = "none";
+  ind.style.width = on.offsetWidth + "px";
+  ind.style.transform = `translateX(${on.offsetLeft}px)`;
+  if (!animate) { void ind.offsetWidth; ind.style.transition = ""; }
+}
+addEventListener("resize", () => moveInd(false));
+$("#tabs").addEventListener("click", e => { const b = e.target.closest("button[data-v]"); if (b) setView(b.dataset.v); });
 
 let qt;
-$("#q").addEventListener("input", e => { clearTimeout(qt); qt = setTimeout(() => { state.q = e.target.value; state.animate = true; render(); }, 80); });
+$("#q").addEventListener("input", e => { clearTimeout(qt); qt = setTimeout(() => { state.q = e.target.value; render(); }, 90); });
+
+async function toggleFav(id, btn) {
+  const on = !state.favs[id];
+  if (on) state.favs[id] = true; else delete state.favs[id];
+  if (btn) { btn.classList.toggle("on", on); anim(btn, [{ transform: "scale(1)" }, { transform: "scale(1.35)" }, { transform: "scale(1)" }], { duration: 450 }); }
+  if (current === id) $("#pFav").classList.toggle("on", on);
+  if (state.view === "fav") render(); else $("#nFav").textContent = Object.keys(state.favs).filter(x => state.apps[x]).length || "";
+  try { await store.setFav(id, on); } catch { toast("Couldn't update favorites."); }
+}
+
 grid.addEventListener("click", e => {
-  if (e.target.closest("[data-add]")) return openEditor();
   const c = e.target.closest(".card"); if (!c) return;
-  if (e.target.closest("[data-edit]")) return openEditor(c.dataset.id);
-  openPlayer(c.dataset.id);
+  const id = c.dataset.id;
+  if (e.target.closest("[data-fav]")) return toggleFav(id, e.target.closest("[data-fav]"));
+  if (e.target.closest("[data-edit]")) return openEditor(id);
+  openPlayer(id, c);
 });
-grid.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.classList.contains("card")) openPlayer(e.target.dataset.id); });
+emptyEl.addEventListener("click", e => { if (e.target.closest("[data-add]")) openEditor(); });
+grid.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.classList.contains("card")) openPlayer(e.target.dataset.id, e.target); });
 
-/* overlays */
+/* ---------------- overlays ---------------- */
 function show(el) { el.classList.remove("closing"); el.classList.add("open"); }
-function hide(el, after) { if (!el.classList.contains("open")) return; el.classList.add("closing"); setTimeout(() => { el.classList.remove("open", "closing"); after && after(); }, 200); }
+function hide(el, after) {
+  if (!el.classList.contains("open")) return;
+  el.classList.add("closing");
+  setTimeout(() => { el.classList.remove("open", "closing"); after && after(); }, REDUCE ? 0 : 240);
+}
 
-/* player */
-const playerOv = $("#playerOv"), frame = $("#frame");
-let current = null;
-async function openPlayer(id) {
+/* ---------------- player + cloud save ---------------- */
+const playerOv = $("#playerOv"), playerBox = $("#playerBox"), frame = $("#frame");
+let current = null, fromCard = null, savedTimer = null;
+
+// Injected into every game: replaces localStorage with a copy that syncs to your vault.
+function saveShim(data) {
+  const json = JSON.stringify(data || {}).replace(/</g, "\\u003c");
+  return `<script>(function(){var INIT=${json};
+function mk(init,sync){var o=Object.create(null),h=Object.prototype.hasOwnProperty;for(var k in init)o[k]=String(init[k]);
+var api={getItem:function(k){k=String(k);return h.call(o,k)?o[k]:null},setItem:function(k,v){o[String(k)]=String(v);sync&&sync(o)},removeItem:function(k){delete o[String(k)];sync&&sync(o)},clear:function(){for(var k in o)delete o[k];sync&&sync(o)},key:function(i){var ks=Object.keys(o);return i>=0&&i<ks.length?ks[i]:null}};
+return new Proxy(api,{get:function(t,p){if(p==="length")return Object.keys(o).length;if(typeof p==="symbol")return t[p];if(p in t)return t[p];return api.getItem(p)},set:function(t,p,v){if(!(p in t))api.setItem(p,v);return true},deleteProperty:function(t,p){api.removeItem(p);return true},has:function(t,p){return p in t||h.call(o,p)},ownKeys:function(){return Object.keys(o)},getOwnPropertyDescriptor:function(t,p){return h.call(o,p)?{value:o[p],enumerable:true,configurable:true,writable:true}:undefined}})}
+var timer=null,last=null;function send(){timer=null;try{parent.postMessage({nebulaSave:1,data:JSON.stringify(last)},"*")}catch(e){}}
+function sync(o){last=o;if(!timer)timer=setTimeout(send,500)}function flush(){if(timer){clearTimeout(timer);send()}}
+var L=mk(INIT,sync),S=mk({},null);
+try{Object.defineProperty(window,"localStorage",{value:L,configurable:true})}catch(e){}
+try{Object.defineProperty(window,"sessionStorage",{value:S,configurable:true})}catch(e){}
+window.nebulaSave={get:function(k){return L.getItem(k)},set:function(k,v){L.setItem(k,v)},remove:function(k){L.removeItem(k)},flush:flush};
+addEventListener("message",function(e){if(e.data&&e.data.nebulaFlush)flush()});addEventListener("pagehide",flush);
+})();<\/script>`;
+}
+function inject(html, shim) {
+  const m = html.match(/<head(\s[^>]*)?>/i) || html.match(/<html(\s[^>]*)?>/i) || html.match(/<!doctype[^>]*>/i);
+  if (!m) return shim + html;
+  const i = m.index + m[0].length;
+  return html.slice(0, i) + shim + html.slice(i);
+}
+addEventListener("message", e => {
+  if (!current || e.source !== frame.contentWindow || !e.data || e.data.nebulaSave !== 1) return;
+  const s = e.data.data, id = current;
+  if (typeof s !== "string") return;
+  if (s.length > MAX_SAVE) return toast("Save data is too large to sync.");
+  store.putSave(id, s).then(() => {
+    const el = $("#pSaved"); el.classList.add("on");
+    clearTimeout(savedTimer); savedTimer = setTimeout(() => el.classList.remove("on"), 1600);
+  }).catch(() => toast("Couldn't save progress."));
+});
+async function flushGame() {
+  try { frame.contentWindow?.postMessage({ nebulaFlush: 1 }, "*"); } catch {}
+  await sleep(140);
+}
+
+async function openPlayer(id, cardEl) {
   const a = state.apps[id]; if (!a) return;
-  current = id;
+  current = id; fromCard = cardEl || null;
   $("#pTitle").textContent = a.name || "Untitled";
+  $("#pFav").classList.toggle("on", !!state.favs[id]);
+  $("#pSaved").classList.remove("on");
   frame.classList.remove("ready"); frame.removeAttribute("srcdoc"); $("#pSpin").classList.remove("hidden");
   show(playerOv);
+  if (fromCard && !REDUCE) {
+    const s = fromCard.getBoundingClientRect(), dr = playerBox.getBoundingClientRect();
+    anim(playerBox, [
+      { transform: `translate(${s.left - dr.left}px,${s.top - dr.top}px) scale(${s.width / dr.width},${s.height / dr.height})`, transformOrigin: "0 0", opacity: .2, borderRadius: "40px" },
+      { transform: "none", transformOrigin: "0 0", opacity: 1, borderRadius: "14px" }
+    ], { duration: 600 });
+  }
+  store.markPlayed(id).catch(() => {});
   try {
     let html = state.cache.get(id);
-    if (html == null) { html = await store.getFile(id); if (html == null) throw 0; state.cache.set(id, html); }
+    const [h, save] = await Promise.all([html == null ? store.getFile(id) : html, store.getSave(id).catch(() => ({}))]);
+    if (h == null) throw 0;
+    state.cache.set(id, h);
     if (current !== id) return;
     frame.onload = () => { $("#pSpin").classList.add("hidden"); frame.classList.add("ready"); frame.focus(); };
-    frame.srcdoc = html;
+    frame.srcdoc = inject(h, saveShim(save));
   } catch { toast("Couldn't open that file."); closePlayer(); }
 }
-function closePlayer() {
+async function closePlayer() {
+  if (!playerOv.classList.contains("open") || playerOv.classList.contains("closing")) return;
+  await flushGame();
   if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-  hide(playerOv, () => { frame.removeAttribute("srcdoc"); current = null; });
+  const target = fromCard && fromCard.isConnected ? fromCard.getBoundingClientRect() : null;
+  if (target && !REDUCE && target.width) {
+    const dr = playerBox.getBoundingClientRect();
+    anim(playerBox, [
+      { transform: "none", transformOrigin: "0 0", opacity: 1 },
+      { transform: `translate(${target.left - dr.left}px,${target.top - dr.top}px) scale(${target.width / dr.width},${target.height / dr.height})`, transformOrigin: "0 0", opacity: 0, borderRadius: "40px" }
+    ], { duration: 260, fill: "forwards" })?.finished.then(a => a.cancel()).catch(() => {});
+  }
+  hide(playerOv, () => { frame.removeAttribute("srcdoc"); current = null; fromCard = null; });
 }
 $("#pClose").onclick = closePlayer;
-$("#pReload").onclick = () => { const h = frame.srcdoc; frame.classList.remove("ready"); frame.srcdoc = ""; requestAnimationFrame(() => frame.srcdoc = h); };
-$("#pFull").onclick = () => { const s = $("#stage"); document.fullscreenElement ? document.exitFullscreen() : (s.requestFullscreen?.() || s.webkitRequestFullscreen?.()); };
+$("#pFav").onclick = () => current && toggleFav(current, $("#pFav"));
+$("#pReload").onclick = async () => {
+  if (!current) return;
+  await flushGame();
+  const id = current, save = await store.getSave(id).catch(() => ({}));
+  frame.classList.remove("ready"); $("#pSpin").classList.remove("hidden");
+  frame.srcdoc = inject(state.cache.get(id) || "", saveShim(save));
+};
+$("#pFull").onclick = () => {
+  const el = document.documentElement;
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  else (el.requestFullscreen?.() || el.webkitRequestFullscreen?.())?.catch?.(() => {});
+};
+document.addEventListener("fullscreenchange", () => document.body.classList.toggle("fs", !!document.fullscreenElement));
+playerOv.addEventListener("click", e => { if (e.target === playerOv) closePlayer(); });
 
-/* editor */
-const editorOv = $("#editorOv"), drop = $("#drop");
-let edId = null, edHtml = null;
+/* ---------------- editor ---------------- */
+const editorOv = $("#editorOv"), drop = $("#drop"), imgPrev = $("#imgPrev");
+let edId = null, edHtml = null, edThumb; // edThumb: undefined = unchanged, null = removed, string = new
+function showThumb(src) {
+  imgPrev.querySelectorAll("img,span").forEach(n => n.remove());
+  if (src) { const im = new Image(); im.src = src; im.alt = ""; imgPrev.appendChild(im); }
+  else { const s = document.createElement("span"); s.textContent = "Add image"; imgPrev.appendChild(s); }
+  $("#imgRemove").classList.toggle("hidden", !src);
+  $("#imgChoose").textContent = src ? "Change image" : "Choose image";
+}
 function openEditor(id = null) {
-  edId = id; edHtml = null;
+  edId = id; edHtml = null; edThumb = undefined;
   const a = id ? state.apps[id] : {};
   $("#edTitle").textContent = id ? "Edit" : "Add";
   $("#edName").value = a.name || ""; $("#edDesc").value = a.desc || "";
   drop.classList.remove("has");
   $("#dropTxt").textContent = id ? "Drop a new .html file to replace (optional)" : "Drop an .html file or click to choose";
-  const del = $("#edDelete"); del.classList.toggle("hidden", !id); del.dataset.armed = ""; del.textContent = "Delete";
+  $("#edDelete").classList.toggle("hidden", !id);
+  $("#edReset").classList.toggle("hidden", !id);
+  $("#edFile").value = ""; $("#edImg").value = "";
+  showThumb(id && isImg(state.thumbs[id]) ? state.thumbs[id] : null);
   show(editorOv);
 }
 const closeEditor = () => hide(editorOv);
@@ -481,6 +826,7 @@ async function takeFile(f) {
   if (f.size > MAX_BYTES) return toast("That file is too large (max about 9.5 MB).");
   edHtml = await f.text();
   drop.classList.add("has"); $("#dropTxt").textContent = f.name;
+  anim(drop, [{ transform: "scale(.98)" }, { transform: "none" }], { duration: 400 });
   if (!$("#edName").value) {
     const t = new DOMParser().parseFromString(edHtml, "text/html").title?.trim();
     $("#edName").value = (t || f.name.replace(/\.html?$/i, "").replace(/[-_]+/g, " ")).slice(0, 60);
@@ -490,43 +836,130 @@ $("#edFile").onchange = e => takeFile(e.target.files[0]);
 ["dragenter", "dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
 ["dragleave", "drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
 drop.addEventListener("drop", e => takeFile(e.dataTransfer.files[0]));
+
+/* thumbnails are resized in the browser (max 640px) so they stay small */
+async function makeThumb(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+    const scale = Math.min(1, 640 / img.naturalWidth, 640 / img.naturalHeight);
+    const c = document.createElement("canvas");
+    c.width = Math.max(1, Math.round(img.naturalWidth * scale)); c.height = Math.max(1, Math.round(img.naturalHeight * scale));
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    let out = c.toDataURL("image/webp", 0.82);
+    if (!out.startsWith("data:image/webp")) out = c.toDataURL("image/jpeg", 0.82);
+    return out;
+  } finally { URL.revokeObjectURL(url); }
+}
+async function takeImage(f) {
+  if (!f) return;
+  if (!f.type.startsWith("image/")) return toast("Choose an image file.");
+  try { const t = await makeThumb(f); if (t.length > 900000) return toast("That image is too large."); edThumb = t; showThumb(t); }
+  catch { toast("Couldn't read that image."); }
+}
+$("#edImg").onchange = e => takeImage(e.target.files[0]);
+$("#imgChoose").onclick = () => $("#edImg").click();
+$("#imgRemove").onclick = () => { edThumb = null; $("#edImg").value = ""; showThumb(null); };
+["dragenter", "dragover"].forEach(ev => imgPrev.addEventListener(ev, e => { e.preventDefault(); imgPrev.classList.add("over"); }));
+["dragleave", "drop"].forEach(ev => imgPrev.addEventListener(ev, e => { e.preventDefault(); imgPrev.classList.remove("over"); }));
+imgPrev.addEventListener("drop", e => takeImage(e.dataTransfer.files[0]));
+
 $("#edCancel").onclick = closeEditor;
-$("#edDelete").onclick = async e => {
-  const b = e.currentTarget;
-  if (!b.dataset.armed) { b.dataset.armed = "1"; b.textContent = "Confirm delete"; return; }
-  try { await store.deleteApp(edId); state.cache.delete(edId); closeEditor(); } catch { toast("Delete failed."); }
+editorOv.addEventListener("click", e => { if (e.target === editorOv) closeEditor(); });
+$("#edDelete").onclick = async () => {
+  const id = edId, name = state.apps[id]?.name || "this";
+  if (!(await askDeletePassword(`Delete ${name}?`, "This can't be undone. Enter the delete password."))) return;
+  const card = cards.get(id);
+  closeEditor();
+  if (card) await anim(card, [{ opacity: 1, transform: "none" }, { opacity: 0, transform: "scale(.94)" }], { duration: 300, fill: "forwards" })?.finished.catch(() => {});
+  try { await store.deleteApp(id); state.cache.delete(id); toast("Deleted."); }
+  catch { if (card) card.getAnimations().forEach(a => a.cancel()); toast("Delete failed."); }
+};
+$("#edReset").onclick = async () => {
+  const id = edId;
+  if (!(await askDeletePassword("Reset save data?", "Clears this game's saved progress. Enter the delete password."))) return;
+  try { await store.clearSave(id); toast("Save data cleared."); } catch { toast("Couldn't clear save data."); }
 };
 $("#edForm").addEventListener("submit", async e => {
   e.preventDefault();
   const name = $("#edName").value.trim();
   if (!name) return;
-  if (!edId && edHtml == null) { drop.classList.remove("shake"); void drop.offsetWidth; drop.classList.add("shake"); return; }
+  if (!edId && edHtml == null) return shake(drop);
+  if (edId && edHtml != null && !(await askDeletePassword("Replace file?", "Replacing overwrites the old file. Enter the delete password."))) return;
   const save = $("#edSave"); save.disabled = true;
   const id = edId || store.newId(), old = state.apps[id] || {};
   const meta = { name, desc: $("#edDesc").value.trim(), added: old.added || Date.now(), updated: Date.now() };
   if (edHtml != null) meta.size = new Blob([edHtml]).size;
   try {
-    await store.saveApp(id, meta, edHtml);
+    await store.saveApp(id, meta, edHtml, edThumb);
     if (edHtml != null) state.cache.set(id, edHtml);
-    state.animate = true; closeEditor();
+    closeEditor();
   } catch (err) { console.error(err); toast("Save failed."); }
   save.disabled = false;
 });
 $("#addBtn").onclick = () => openEditor();
-playerOv.addEventListener("click", e => { if (e.target === playerOv) closePlayer(); });
-editorOv.addEventListener("click", e => { if (e.target === editorOv) closeEditor(); });
 
-/* lock, keys, toast */
-$("#lockBtn").onclick = () => { ss.del("nebula.k"); ls.del("nebula.trust"); document.body.style.transition = "opacity .35s"; document.body.style.opacity = "0"; setTimeout(() => location.reload(), 350); };
+/* ---------------- delete password dialog ---------------- */
+const confirmOv = $("#confirmOv");
+let cfResolve = null;
+function askDeletePassword(title, note) {
+  $("#cfTitle").textContent = title; $("#cfNote").textContent = note;
+  $("#cfPw").value = ""; $("#cfErr").textContent = ""; $("#cfGo").disabled = false;
+  show(confirmOv); setTimeout(() => $("#cfPw").focus(), 60);
+  return new Promise(r => cfResolve = r);
+}
+function closeConfirm(ok) { hide(confirmOv); if (cfResolve) { cfResolve(ok); cfResolve = null; } }
+$("#cfCancel").onclick = () => closeConfirm(false);
+confirmOv.addEventListener("click", e => { if (e.target === confirmOv) closeConfirm(false); });
+$("#cfForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const v = $("#cfPw").value.trim(); if (!v) return;
+  $("#cfGo").disabled = true; $("#cfErr").textContent = "";
+  let ok = false;
+  try { ok = await store.elevate(v); } catch { $("#cfErr").textContent = "Connection problem."; }
+  $("#cfGo").disabled = false;
+  if (ok) return closeConfirm(true);
+  if (!$("#cfErr").textContent) $("#cfErr").textContent = "Wrong password.";
+  shake($("#cfForm")); $("#cfPw").select();
+});
+
+/* ---------------- lock, keys, toast ---------------- */
+$("#lockBtn").onclick = async () => {
+  ss.del("nebula.k"); ls.del("nebula.trust");
+  await anim(document.body, [{ opacity: 1, filter: "blur(0)" }, { opacity: 0, filter: "blur(6px)" }], { duration: 380, fill: "forwards" })?.finished.catch(() => {});
+  location.reload();
+};
 addEventListener("keydown", e => {
-  if (e.key === "Escape") { editorOv.classList.contains("open") ? closeEditor() : closePlayer(); }
+  if (e.key === "Escape") {
+    if (confirmOv.classList.contains("open")) closeConfirm(false);
+    else if (editorOv.classList.contains("open")) closeEditor();
+    else closePlayer();
+  }
   const typing = /input|textarea/i.test(document.activeElement?.tagName);
   if (e.key === "/" && !typing && $("#app").classList.contains("active")) { e.preventDefault(); $("#q").focus(); }
 });
 function toast(t) {
   const el = document.createElement("div"); el.className = "toast"; el.textContent = t;
-  document.body.appendChild(el); setTimeout(() => el.remove(), 2400);
+  $("#toasts").appendChild(el);
+  setTimeout(() => { el.classList.add("out"); setTimeout(() => el.remove(), 300); }, 2400);
 }
+
+/* ---------------- panic button (triple-click) ---------------- */
+(() => {
+  const btn = $("#panic"), dots = [...btn.querySelectorAll(".dots i")];
+  let n = 0, t = null;
+  const paint = () => dots.forEach((d, i) => d.classList.toggle("on", i < n));
+  btn.addEventListener("click", e => {
+    e.preventDefault(); e.stopPropagation();
+    n++; paint(); clearTimeout(t);
+    if (n >= 3) {
+      try { frame.contentWindow?.postMessage({ nebulaFlush: 1 }, "*"); } catch {}
+      location.replace(PANIC_URL); // replace: the back button won't return here
+      return;
+    }
+    t = setTimeout(() => { n = 0; paint(); }, 700);
+  });
+})();
 
 boot();
 </script>
